@@ -53,7 +53,13 @@ schließt sich, sobald man die Datei anfasst.)
 
 Der Modus „unberührt liegen lassen" ist für Ordner gedacht, die jemand anders
 verwaltet: nichts wird verschoben oder gelöscht, ein Merkzettel
-(`seen.json`) hält fest, was schon oben war.
+(`seen.json`) hält fest, was schon oben war. Der Abschnitt **Zurzeit** zeigt
+je Ordner, was gerade hochginge — und wenn nichts ansteht, warum nicht: zu
+alt, schon erledigt, passt nicht zum Muster. Dort lässt sich der Merkzettel
+auch zurücksetzen, damit alles noch einmal hochgeht.
+
+Wird ein Ordner aus der Liste entfernt, verschwindet sein Merkzettel mit ihm —
+ein später neu angelegter Ordner desselben Pfads fängt also bei null an.
 
 **Allgemein** — Anmeldeobjekt, Benachrichtigungen, Größenlimit, Aufräumen von
 `Uploaded/` nach X Tagen, Pfade zu LibreOffice und Calibre mit Statusanzeige.

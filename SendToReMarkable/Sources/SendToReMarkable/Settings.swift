@@ -23,6 +23,11 @@ struct WatchSource: Codable, Identifiable, Hashable {
     var renameRules: [RenameRule] = []
 
     var url: URL { URL(fileURLWithPath: (path as NSString).expandingTildeInPath) }
+
+    /// Aendert sich das, muss die Vorschau neu gezaehlt werden.
+    var filterKey: String {
+        "\(path)|\(patterns.joined(separator: ","))|\(maxAgeDays)|\(subfolders)|\(move)"
+    }
     var displayName: String { url.lastPathComponent }
 
     var patternText: String {

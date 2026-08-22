@@ -19,10 +19,43 @@ final class UploadEngine: ObservableObject {
 
     // MARK: Oeffentliche Aufrufe
 
+    /// Warum Dateien nicht drankommen — fuer die Anzeige in den Einstellungen.
+    struct ScanStats {
+        var total = 0
+        var pattern = 0
+        var tooOld = 0
+        var known = 0
+    }
+
     /// Was dieser Ordner gerade hochladen wuerde — fuer die Rueckfrage beim
     /// Einschalten einer Quelle.
     func matchingFiles(in source: WatchSource) -> [URL] {
-        collect(from: source, state: seen)
+        var stats = ScanStats()
+        return collect(from: source, state: seen, stats: &stats)
+    }
+
+    /// Dasselbe mit Begruendung, wenn nichts uebrig bleibt.
+    func preview(for source: WatchSource) -> (files: [URL], stats: ScanStats) {
+        var stats = ScanStats()
+        let files = collect(from: source, state: seen, stats: &stats)
+        return (files, stats)
+    }
+
+    /// Wie viele Dateien dieses Ordners im Merkzettel stehen.
+    func knownCount(for source: WatchSource) -> Int {
+        let prefix = source.url.path + "/"
+        return seen.keys.filter { $0.hasPrefix(prefix) }.count
+    }
+
+    /// Merkzettel fuer einen Ordner leeren — danach geht alles erneut hoch.
+    func forget(source: WatchSource) {
+        let prefix = source.url.path + "/"
+        let before = seen.count
+        seen = seen.filter { !$0.key.hasPrefix(prefix) }
+        Self.saveState(seen)
+        if before != seen.count {
+            Log.shared.info("Merkzettel für \(source.displayName) geleert (\(before - seen.count) Einträge)")
+        }
     }
 
     /// Vorhandene Dateien als „schon erledigt" abhaken, ohne sie hochzuladen.
@@ -113,7 +146,8 @@ final class UploadEngine: ObservableObject {
 
         for source in settings.sources where source.enabled {
             // Erst jetzt warten: nur fuer Dateien, die wirklich in Frage kommen
-            let candidates = collect(from: source, state: state)
+            var stats = ScanStats()
+            let candidates = collect(from: source, state: state, stats: &stats)
                 .filter { isStable($0, wait: source.stableWait) }
             guard !candidates.isEmpty else {
                 cleanupArchive(source: source, settings: settings)
@@ -192,7 +226,8 @@ final class UploadEngine: ObservableObject {
 
     // MARK: Dateien einsammeln
 
-    private nonisolated func collect(from source: WatchSource, state: [String: String]) -> [URL] {
+    private nonisolated func collect(from source: WatchSource, state: [String: String],
+                                     stats: inout ScanStats) -> [URL] {
         let root = source.url
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: root.path, isDirectory: &isDir), isDir.boolValue else {
@@ -219,11 +254,21 @@ final class UploadEngine: ObservableObject {
             let relative = relativeParts(of: url, in: root)
             if relative.dropLast().contains(where: { $0 == "Uploaded" || $0 == "Failed" }) { continue }
             if Converter.shouldSkip(url) { continue }
-            if !matches(url.lastPathComponent, patterns: source.patterns) { continue }
+            stats.total += 1
+            if !matches(url.lastPathComponent, patterns: source.patterns) {
+                stats.pattern += 1
+                continue
+            }
             if source.maxAgeDays > 0,
                let modified = try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
-               now.timeIntervalSince(modified) > source.maxAgeDays * 86400 { continue }
-            if let mark = Self.fingerprint(url), state[url.path] == mark { continue }
+               now.timeIntervalSince(modified) > source.maxAgeDays * 86400 {
+                stats.tooOld += 1
+                continue
+            }
+            if let mark = Self.fingerprint(url), state[url.path] == mark {
+                stats.known += 1
+                continue
+            }
             found.append(url)
         }
 

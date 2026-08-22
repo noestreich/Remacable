@@ -98,6 +98,10 @@ struct FoldersTab: View {
 
     private func removeSelected() {
         guard let selection, store.settings.sources.count > 1 else { return }
+        // Sonst erbt ein spaeter neu angelegter Ordner desselben Pfads die alte Erinnerung
+        if let source = store.settings.sources.first(where: { $0.id == selection }) {
+            UploadEngine.shared.forget(source: source)
+        }
         store.settings.sources.removeAll { $0.id == selection }
         self.selection = store.settings.sources.first?.id
         coordinator.applySettings()
@@ -109,6 +113,13 @@ struct FoldersTab: View {
 struct SourceDetail: View {
     @Binding var source: WatchSource
     @EnvironmentObject private var coordinator: Coordinator
+
+    private struct Preview {
+        var matching = 0
+        var stats = UploadEngine.ScanStats()
+        var known = 0
+    }
+    @State private var preview: Preview?
 
     var body: some View {
         Form {
@@ -192,6 +203,38 @@ struct SourceDetail: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
+            Section("Zurzeit") {
+                if let preview {
+                    if preview.matching > 0 {
+                        Label(preview.matching == 1
+                              ? "Eine Datei wartet auf den Upload"
+                              : "\(preview.matching) Dateien warten auf den Upload",
+                              systemImage: "arrow.up.circle.fill")
+                            .foregroundStyle(.green)
+                    } else {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Label("Nichts zu tun", systemImage: "checkmark.circle")
+                            ForEach(reasons(preview), id: \.self) { reason in
+                                Text("• " + reason)
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+
+                    if preview.known > 0 {
+                        HStack {
+                            Text("Merkzettel: \(preview.known) Datei(en) gelten als erledigt")
+                                .font(.caption).foregroundStyle(.secondary)
+                            Spacer()
+                            Button("Zurücksetzen") {
+                                UploadEngine.shared.forget(source: source)
+                                refreshPreview()
+                            }
+                        }
+                    }
+                }
+            }
+
             Section("Umbenennen") {
                 if source.renameRules.isEmpty {
                     Text("Ohne Regel wird der Dateiname zum Titel auf dem Gerät.")
@@ -216,6 +259,35 @@ struct SourceDetail: View {
         }
         .formStyle(.grouped)
         .onChange(of: source) { _, _ in coordinator.applySettings() }
+        .onChange(of: source.filterKey) { _, _ in refreshPreview() }
+        .onAppear { refreshPreview() }
+    }
+
+    private func refreshPreview() {
+        let result = UploadEngine.shared.preview(for: source)
+        preview = Preview(matching: result.files.count,
+                          stats: result.stats,
+                          known: UploadEngine.shared.knownCount(for: source))
+    }
+
+    /// Warum gerade nichts hochgeht — das ist sonst nicht nachvollziehbar.
+    private func reasons(_ preview: Preview) -> [String] {
+        var list: [String] = []
+        if preview.stats.tooOld > 0 {
+            list.append("\(preview.stats.tooOld) Datei(en) sind älter als \(Int(source.maxAgeDays)) Tage")
+        }
+        if preview.stats.known > 0 {
+            list.append("\(preview.stats.known) Datei(en) wurden schon hochgeladen")
+        }
+        if preview.stats.pattern > 0 {
+            list.append("\(preview.stats.pattern) Datei(en) passen nicht zum Muster")
+        }
+        if list.isEmpty {
+            list.append(preview.stats.total == 0
+                        ? "Der Ordner enthält keine Dateien"
+                        : "Alles erledigt")
+        }
+        return list
     }
 
     private func choosePath() {
