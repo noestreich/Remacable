@@ -45,15 +45,27 @@ schließt sich, sobald man die Datei anfasst.)
 |---|---|
 | Zielordner | Wohin in der Cloud, z. B. `/Inbox` |
 | Unterordner spiegeln | `Inbox/Zeitungen/x.pdf` → `/Inbox/Zeitungen` (wird angelegt) |
-| Nach dem Upload | Nach `Uploaded/` verschieben **oder** unberührt liegen lassen |
+| Nach dem Upload | Unberührt liegen lassen (Standard) **oder** nach `Uploaded/` verschieben |
 | Dateimuster | z. B. `Zeitung_*.pdf, *.epub` |
 | Nur neuere Dateien | Altbestand beim ersten Lauf überspringen |
 | Wartezeit | Schutz vor halb geschriebenen Dateien |
 | Umbenennen | Regex → Titel, z. B. `^BMP_\d{4}_(\d{2})(\d{2})(\d{4})$` → `Zeitung \3-\2-\1` |
 
-Der Modus „unberührt liegen lassen" ist für Ordner gedacht, die jemand anders
-verwaltet: nichts wird verschoben oder gelöscht, ein Merkzettel
-(`seen.json`) hält fest, was schon oben war. Der Abschnitt **Zurzeit** zeigt
+Neue Ordner starten im Modus **„unberührt liegen lassen"**: nichts wird
+verschoben oder gelöscht, und es werden keine Unterordner angelegt — fremde
+Archive bleiben so, wie ihr Besitzer sie hinterlassen hat. Ein Merkzettel
+(`seen.json`) hält fest, was schon oben war.
+
+`Uploaded/` und `Failed/` gibt es nur, wo „nach Uploaded verschieben"
+eingeschaltet ist — voreingestellt ist das allein beim mitgelieferten
+Haupt-Watch-Ordner `~/reMarkable Inbox`. Dort ist es sinnvoll: der Ordner ist
+eine Ablage, kein Archiv.
+
+Ohne `Failed/` bliebe eine defekte Datei liegen und würde alle fünf Minuten
+erneut scheitern. Deshalb landen dauerhafte Fehler — nicht unterstütztes
+Format, gescheiterte Konvertierung, zu groß — im Merkzettel und werden nicht
+wiederholt. Netz- und rmapi-Fehler zählen bewusst nicht dazu, die dürfen es
+beim nächsten Lauf wieder versuchen. Der Abschnitt **Zurzeit** zeigt
 je Ordner, was gerade hochginge — und wenn nichts ansteht, warum nicht: zu
 alt, schon erledigt, passt nicht zum Muster. Dort lässt sich der Merkzettel
 auch zurücksetzen, damit alles noch einmal hochgeht.

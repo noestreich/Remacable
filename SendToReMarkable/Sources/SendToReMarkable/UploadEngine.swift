@@ -175,11 +175,19 @@ final class UploadEngine: ObservableObject {
                 } catch {
                     result.failed += 1
                     result.lastError = error.localizedDescription
-                    Log.shared.error("\(file.lastPathComponent): \(error.localizedDescription)")
                     Notifier.send(title: "reMarkable: Fehler",
                                   body: "\(file.lastPathComponent): \(error.localizedDescription)")
                     if source.move {
+                        Log.shared.error("\(file.lastPathComponent): \(error.localizedDescription)")
                         archive(file, source: source, subdir: "Failed", relativeDir: relativeDir)
+                    } else if Self.isPermanent(error), let mark = Self.fingerprint(file) {
+                        // Ohne Failed/ bliebe die Datei liegen und scheiterte alle
+                        // fuenf Minuten erneut — einmal merken, dann Ruhe.
+                        state[file.path] = mark
+                        Self.saveState(state)
+                        Log.shared.error("\(file.lastPathComponent): \(error.localizedDescription) — wird nicht erneut versucht")
+                    } else {
+                        Log.shared.error("\(file.lastPathComponent): \(error.localizedDescription)")
                     }
                 }
             }
@@ -347,6 +355,18 @@ final class UploadEngine: ObservableObject {
                 Log.shared.error("Konnte \(url.lastPathComponent) nicht löschen")
             }
         }
+    }
+
+    /// Fehler, die sich durch Wiederholen nicht beheben lassen. Netz- und
+    /// rmapi-Fehler zaehlen bewusst nicht dazu.
+    private nonisolated static func isPermanent(_ error: Error) -> Bool {
+        if let conversion = error as? ConversionError {
+            switch conversion {
+            case .unsupported, .failed: return true
+            case .toolMissing: return false
+            }
+        }
+        return error is EngineError  // zu gross
     }
 
     // MARK: Umbenennen

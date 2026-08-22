@@ -170,10 +170,10 @@ struct SourceDetail: View {
                 }
                 .pickerStyle(.radioGroup)
                 .labelsHidden()
-                if !source.move {
-                    Text("Für Ordner, die jemand anders verwaltet. Ein Merkzettel hält fest, was schon oben ist; ändert sich die Datei, geht sie erneut hoch.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+                Text(source.move
+                     ? "Legt in diesem Ordner die Unterordner „Uploaded“ und „Failed“ an."
+                     : "Für Ordner, die jemand anders verwaltet: nichts wird verschoben, keine Unterordner angelegt. Ein Merkzettel hält fest, was schon oben ist; ändert sich die Datei, geht sie erneut hoch.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             Section("Filter") {

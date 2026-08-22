@@ -15,7 +15,9 @@ struct WatchSource: Codable, Identifiable, Hashable {
     /// Neue Ordner starten bewusst inaktiv: erst konfigurieren, dann einschalten.
     var enabled: Bool = false
     /// true: Datei wandert nach dem Upload nach Uploaded/ — false: sie bleibt liegen.
-    var move: Bool = true
+    /// Standard ist false, damit fremde Archive unangetastet bleiben; nur der
+    /// mitgelieferte Haupt-Watch-Ordner legt Uploaded/ und Failed/ an.
+    var move: Bool = false
     var subfolders: Bool = true
     var patterns: [String] = ["*"]
     var maxAgeDays: Double = 0
@@ -41,7 +43,8 @@ struct WatchSource: Codable, Identifiable, Hashable {
     }
 
     static func inbox() -> WatchSource {
-        WatchSource(path: Paths.defaultInbox.path, targetFolder: "/Inbox", enabled: true)
+        WatchSource(path: Paths.defaultInbox.path, targetFolder: "/Inbox",
+                    enabled: true, move: true)
     }
 }
 
