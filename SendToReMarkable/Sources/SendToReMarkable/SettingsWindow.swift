@@ -38,6 +38,7 @@ struct GeneralTab: View {
                         StatusDot(ok: RmapiClient.isInstalled)
                         Text(coordinator.rmapiVersion ?? "nicht installiert")
                             .foregroundStyle(RmapiClient.isInstalled ? .primary : .secondary)
+                        versionBadge
                         Spacer()
                         Button(RmapiClient.isInstalled ? "Aktualisieren" : "Installieren") {
                             install()
@@ -131,7 +132,32 @@ struct GeneralTab: View {
         } message: {
             Text(errorMessage ?? "")
         }
-        .onAppear { coordinator.refreshStatus() }
+        .onAppear {
+            coordinator.refreshStatus()
+            coordinator.checkRmapiVersion()
+        }
+    }
+
+    /// Zeigt die Version von GitHub neben der installierten an.
+    @ViewBuilder
+    private var versionBadge: some View {
+        if let latest = coordinator.latestRmapiVersion {
+            if coordinator.rmapiUpdateAvailable {
+                Text("→ \(latest)")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.orange)
+                    .help("Auf GitHub liegt \(latest) — „Aktualisieren\u{201C} holt sie.")
+            } else if RmapiClient.isInstalled {
+                Text("aktuell")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .help("Neueste Version auf GitHub: \(latest)")
+            } else {
+                Text("verfügbar: \(latest)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 
     private func install() {

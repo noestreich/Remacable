@@ -74,17 +74,52 @@ enum RmapiClient {
         _ = try run(["put", file.path, folder], timeout: 1800)
     }
 
+    // MARK: Versionen
+
+    private static func fetchLatestRelease() async throws -> [String: Any] {
+        var request = URLRequest(url: releaseAPI)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 20
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200,
+              let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw RmapiError.download("GitHub antwortet nicht wie erwartet")
+        }
+        return json
+    }
+
+    /// Neueste veroeffentlichte Version — nur die Nummer, ohne Download.
+    static func latestVersion() async throws -> String {
+        guard let tag = try await fetchLatestRelease()["tag_name"] as? String else {
+            throw RmapiError.download("Release ohne Versionsangabe")
+        }
+        return tag
+    }
+
+    /// Zieht "0.0.35" aus Angaben wie "v0.0.35" oder "rmapi version v0.0.35".
+    static func versionNumber(_ raw: String?) -> String? {
+        guard let raw,
+              let range = raw.range(of: #"\d+(\.\d+)+"#, options: .regularExpression) else { return nil }
+        return String(raw[range])
+    }
+
+    static func isNewer(_ candidate: String, than current: String) -> Bool {
+        let new = candidate.split(separator: ".").compactMap { Int($0) }
+        let old = current.split(separator: ".").compactMap { Int($0) }
+        for index in 0..<max(new.count, old.count) {
+            let a = index < new.count ? new[index] : 0
+            let b = index < old.count ? old[index] : 0
+            if a != b { return a > b }
+        }
+        return false
+    }
+
     // MARK: Installation
 
     /// Laedt das aktuelle Release von GitHub und legt das Binary bereit.
     static func install(progress: @escaping (String) -> Void) async throws -> String {
         progress("Suche aktuelles Release …")
-        var request = URLRequest(url: releaseAPI)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            throw RmapiError.download("GitHub antwortet nicht wie erwartet")
-        }
+        let json = try await fetchLatestRelease()
 
         #if arch(arm64)
         let assetName = "rmapi-macos-arm64.zip"
@@ -92,8 +127,7 @@ enum RmapiClient {
         let assetName = "rmapi-macos-intel.zip"
         #endif
 
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let assets = json["assets"] as? [[String: Any]],
+        guard let assets = json["assets"] as? [[String: Any]],
               let asset = assets.first(where: { ($0["name"] as? String) == assetName }),
               let urlString = asset["browser_download_url"] as? String,
               let downloadURL = URL(string: urlString) else {

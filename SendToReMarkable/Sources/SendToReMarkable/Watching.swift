@@ -96,11 +96,14 @@ final class Coordinator: ObservableObject {
 
     @Published private(set) var isWatching = false
     @Published var rmapiVersion: String?
+    /// Neueste Version laut GitHub — nur zur Anzeige, es wird nichts geladen.
+    @Published var latestRmapiVersion: String?
     @Published var isPaired = false
     @Published var legacyAgentActive = false
 
     private var watcher: FolderWatcher!
     private var timer: Timer?
+    private var versionTimer: Timer?
     /// Solange die Einstellungen offen sind, wird nicht automatisch hochgeladen —
     /// sonst funkt ein Scan in eine halb getippte Konfiguration hinein.
     private(set) var settingsOpen = false
@@ -123,9 +126,29 @@ final class Coordinator: ObservableObject {
                 self.requestScan(reason: "regelmäßige Prüfung")
             }
         }
+        checkRmapiVersion()
+        versionTimer = Timer.scheduledTimer(withTimeInterval: 86_400, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.checkRmapiVersion() }
+        }
         if SettingsStore.shared.settings.watchingEnabled {
             UploadEngine.shared.scanAll(reason: "Start")
         }
+    }
+
+    /// Fragt bei GitHub nach der neuesten rmapi-Version. Schlaegt das fehl
+    /// (kein Netz), bleibt die Anzeige einfach leer.
+    func checkRmapiVersion() {
+        Task { [weak self] in
+            guard let tag = try? await RmapiClient.latestVersion() else { return }
+            await MainActor.run { self?.latestRmapiVersion = tag }
+        }
+    }
+
+    /// true, wenn GitHub eine hoehere Version meldet als die installierte.
+    var rmapiUpdateAvailable: Bool {
+        guard let installed = RmapiClient.versionNumber(rmapiVersion),
+              let latest = RmapiClient.versionNumber(latestRmapiVersion) else { return false }
+        return RmapiClient.isNewer(latest, than: installed)
     }
 
     func refreshStatus() {

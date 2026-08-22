@@ -58,6 +58,11 @@ verwaltet: nichts wird verschoben oder gelöscht, ein Merkzettel
 **Allgemein** — Anmeldeobjekt, Benachrichtigungen, Größenlimit, Aufräumen von
 `Uploaded/` nach X Tagen, Pfade zu LibreOffice und Calibre mit Statusanzeige.
 
+Neben der installierten rmapi-Version steht, was GitHub gerade anbietet:
+`aktuell`, oder orange `→ v0.0.36`, wenn es etwas Neueres gibt. Geprüft wird
+beim Start, beim Öffnen der Einstellungen und einmal täglich — heruntergeladen
+wird nichts von allein, das macht erst **Aktualisieren**.
+
 **Protokoll** — mitlaufendes Log, auch als Datei unter
 `~/Library/Logs/SendToReMarkable.log`.
 
