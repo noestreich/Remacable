@@ -19,6 +19,9 @@ die auch die offizielle Desktop-App benutzt. Du brauchst **kein reMarkable
 Connect**, keinen Bastel-Zugriff aufs Gerät und schickst nichts über fremde
 Server.
 
+Die Oberfläche gibt es auf **Deutsch und Englisch** — sie richtet sich nach der
+Systemsprache.
+
 ## Wofür das gut ist
 
 * **Zeitung, Newsletter, Berichte** landen automatisch auf dem Tablet, sobald
@@ -159,6 +162,11 @@ Werkzeug schneidet den Rand weg und skaliert auf Höhe:
 ```bash
 swift Tools/make-menubar-icon.swift vorlage.png Resources/MenuBarIcon.png 44
 ```
+
+Die Oberflächentexte stehen als englische Zeichenketten im Quelltext; die
+deutsche Fassung liegt in `Resources/de.lproj/Localizable.strings`. Eine weitere
+Sprache braucht nur eine zusätzliche `.lproj`-Datei, `build.sh` nimmt sie
+automatisch mit.
 
 Aufbau des Codes: `Sources/Remacable/` — `UploadEngine` sammelt ein,
 konvertiert und lädt hoch, `Watching` hängt an FSEvents, `RmapiClient` spricht

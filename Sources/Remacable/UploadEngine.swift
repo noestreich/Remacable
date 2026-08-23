@@ -8,7 +8,7 @@ final class UploadEngine: ObservableObject {
     static let shared = UploadEngine()
 
     @Published private(set) var isBusy = false
-    @Published private(set) var status: String = "Bereit"
+    @Published private(set) var status: String = String(localized: "Ready")
     @Published private(set) var uploadedTotal = 0
     @Published private(set) var lastUpload: Date?
 
@@ -54,7 +54,8 @@ final class UploadEngine: ObservableObject {
         seen = seen.filter { !$0.key.hasPrefix(prefix) }
         Self.saveState(seen)
         if before != seen.count {
-            Log.shared.info("Merkzettel für \(source.displayName) geleert (\(before - seen.count) Einträge)")
+            Log.shared.info(String(format: String(localized: "Cleared upload memory for %@ (%lld entries)"),
+                                   source.displayName, before - seen.count))
         }
     }
 
@@ -70,7 +71,7 @@ final class UploadEngine: ObservableObject {
         let settings = SettingsStore.shared.settings
         guard RmapiClient.isInstalled else { return }
         let state = seen
-        setBusy(true, status: "Prüfe Ordner …")
+        setBusy(true, status: String(localized: "Checking folders…"))
         queue.async { [weak self] in
             guard let self else { return }
             let (result, updated) = self.runScan(settings: settings, state: state, reason: reason)
@@ -84,8 +85,8 @@ final class UploadEngine: ObservableObject {
         let settings = SettingsStore.shared.settings
         let target = folder ?? settings.defaultTargetFolder
         setBusy(true, status: files.count == 1
-                ? "Lade \(files[0].lastPathComponent) hoch …"
-                : "Lade \(files.count) Dateien hoch …")
+                ? String(format: String(localized: "Uploading %@…"), files[0].lastPathComponent)
+                : String(format: String(localized: "Uploading %lld files…"), files.count))
         queue.async { [weak self] in
             guard let self else { return }
             var taken = TitleRegistry()
@@ -100,7 +101,7 @@ final class UploadEngine: ObservableObject {
                     result.failed += 1
                     result.lastError = error.localizedDescription
                     Log.shared.error("\(file.lastPathComponent): \(error.localizedDescription)")
-                    Notifier.send(title: "Remacable: Fehler",
+                    Notifier.send(title: String(localized: "Remacable: Error"),
                                   body: "\(file.lastPathComponent): \(error.localizedDescription)")
                 }
             }
@@ -153,7 +154,8 @@ final class UploadEngine: ObservableObject {
                 cleanupArchive(source: source, settings: settings)
                 continue
             }
-            Log.shared.info("\(source.displayName): \(candidates.count) Datei(en) — \(reason)")
+            Log.shared.info(String(format: String(localized: "%@: %lld file(s) — %@"),
+                                   source.displayName, candidates.count, reason))
 
             for file in candidates {
                 let relativeDir = self.relativeDir(of: file, in: source)
@@ -175,7 +177,7 @@ final class UploadEngine: ObservableObject {
                 } catch {
                     result.failed += 1
                     result.lastError = error.localizedDescription
-                    Notifier.send(title: "Remacable: Fehler",
+                    Notifier.send(title: String(localized: "Remacable: Error"),
                                   body: "\(file.lastPathComponent): \(error.localizedDescription)")
                     if source.move {
                         Log.shared.error("\(file.lastPathComponent): \(error.localizedDescription)")
@@ -185,7 +187,8 @@ final class UploadEngine: ObservableObject {
                         // fuenf Minuten erneut — einmal merken, dann Ruhe.
                         state[file.path] = mark
                         Self.saveState(state)
-                        Log.shared.error("\(file.lastPathComponent): \(error.localizedDescription) — wird nicht erneut versucht")
+                        Log.shared.error(String(format: String(localized: "%@: %@ — will not be retried"),
+                                            file.lastPathComponent, error.localizedDescription))
                     } else {
                         Log.shared.error("\(file.lastPathComponent): \(error.localizedDescription)")
                     }
@@ -239,7 +242,7 @@ final class UploadEngine: ObservableObject {
         let root = source.url
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: root.path, isDirectory: &isDir), isDir.boolValue else {
-            Log.shared.error("Ordner fehlt: \(root.path)")
+            Log.shared.error(String(format: String(localized: "Folder is missing: %@"), root.path))
             return []
         }
         if source.move {
@@ -332,7 +335,8 @@ final class UploadEngine: ObservableObject {
         do {
             try FileManager.default.moveItem(at: file, to: destination)
         } catch {
-            Log.shared.error("Konnte \(file.lastPathComponent) nicht ablegen: \(error.localizedDescription)")
+            Log.shared.error(String(format: String(localized: "Could not file %@: %@"),
+                                    file.lastPathComponent, error.localizedDescription))
         }
     }
 
@@ -350,9 +354,9 @@ final class UploadEngine: ObservableObject {
                   modified < cutoff else { continue }
             do {
                 try FileManager.default.removeItem(at: url)
-                Log.shared.info("Archiv aufgeräumt: \(url.lastPathComponent)")
+                Log.shared.info(String(format: String(localized: "Archive cleaned up: %@"), url.lastPathComponent))
             } catch {
-                Log.shared.error("Konnte \(url.lastPathComponent) nicht löschen")
+                Log.shared.error(String(format: String(localized: "Could not delete %@"), url.lastPathComponent))
             }
         }
     }
@@ -422,15 +426,14 @@ final class UploadEngine: ObservableObject {
             self.uploadedTotal += result.uploaded
             if result.uploaded > 0 {
                 self.lastUpload = Date()
-                let noun = result.uploaded == 1 ? "Dokument" : "Dokumente"
-                self.status = "\(result.uploaded) \(noun) hochgeladen"
+                self.status = String(format: String(localized: "Uploaded %lld document(s)"), result.uploaded)
                 if SettingsStore.shared.settings.notify {
-                    Notifier.send(title: "Remacable", body: "\(result.uploaded) \(noun) hochgeladen")
+                    Notifier.send(title: "Remacable", body: self.status)
                 }
             } else if result.failed > 0 {
-                self.status = result.lastError ?? "Fehlgeschlagen"
+                self.status = result.lastError ?? String(localized: "Failed")
             } else {
-                self.status = "Bereit"
+                self.status = String(localized: "Ready")
             }
         }
     }
@@ -442,7 +445,7 @@ enum EngineError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .tooLarge(let sizeMB, let limit):
-            return String(format: "Datei ist %.0f MB (Limit %.0f MB)", sizeMB, limit)
+            return String(format: String(localized: "File is %.0f MB (limit is %.0f MB)"), sizeMB, limit)
         }
     }
 }

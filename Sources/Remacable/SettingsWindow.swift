@@ -7,11 +7,11 @@ struct SettingsWindow: View {
     var body: some View {
         TabView(selection: $tab) {
             GeneralTab()
-                .tabItem { Label("Allgemein", systemImage: "gearshape") }.tag("allgemein")
+                .tabItem { Label("General", systemImage: "gearshape") }.tag("allgemein")
             FoldersTab()
-                .tabItem { Label("Ordner", systemImage: "folder") }.tag("ordner")
+                .tabItem { Label("Folders", systemImage: "folder") }.tag("ordner")
             LogTab()
-                .tabItem { Label("Protokoll", systemImage: "list.bullet.rectangle") }.tag("protokoll")
+                .tabItem { Label("Log", systemImage: "list.bullet.rectangle") }.tag("protokoll")
         }
         .padding(.top, 10)
         .padding([.horizontal, .bottom], 12)
@@ -32,15 +32,15 @@ struct GeneralTab: View {
 
     var body: some View {
         Form {
-            Section("Einrichtung") {
+            Section("Setup") {
                 LabeledContent("rmapi") {
                     HStack(spacing: 8) {
                         StatusDot(ok: RmapiClient.isInstalled)
-                        Text(coordinator.rmapiVersion ?? "nicht installiert")
+                        Text(coordinator.rmapiVersion ?? String(localized: "not installed"))
                             .foregroundStyle(RmapiClient.isInstalled ? .primary : .secondary)
                         versionBadge
                         Spacer()
-                        Button(RmapiClient.isInstalled ? "Aktualisieren" : "Installieren") {
+                        Button(RmapiClient.isInstalled ? "Update" : "Install") {
                             install()
                         }
                         .disabled(isInstalling)
@@ -50,18 +50,18 @@ struct GeneralTab: View {
                     Text(installMessage).font(.caption).foregroundStyle(.secondary)
                 }
 
-                LabeledContent("Konto") {
+                LabeledContent("Account") {
                     HStack(spacing: 8) {
                         StatusDot(ok: coordinator.isPaired)
-                        Text(coordinator.isPaired ? "gekoppelt" : "nicht gekoppelt")
+                        Text(coordinator.isPaired ? "paired" : "not paired")
                         Spacer()
                         if coordinator.isPaired {
-                            Button("Kopplung lösen") {
+                            Button("Unpair") {
                                 RmapiClient.unpair()
                                 coordinator.refreshStatus()
                             }
                         }
-                        Button("Koppeln …") { showPairing = true }
+                        Button("Pair…") { showPairing = true }
                             .disabled(!RmapiClient.isInstalled)
                     }
                 }
@@ -70,63 +70,64 @@ struct GeneralTab: View {
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Der alte launchd-Agent der Skript-Fassung läuft noch.")
+                            Text("The old launchd agent from the script version is still running.")
                                 .font(.callout)
-                            Text("Er würde dieselben Ordner parallel abarbeiten — alles ginge doppelt hoch.")
+                            Text("It would work through the same folders in parallel — everything would go up twice.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Button("Deaktivieren") { coordinator.disableLegacyAgent() }
+                        Button("Disable") { coordinator.disableLegacyAgent() }
                     }
                 }
             }
 
-            Section("Verhalten") {
-                Toggle("Beim Anmelden starten", isOn: Binding(
+            Section("Behavior") {
+                Toggle("Start at login", isOn: Binding(
                     get: { store.settings.launchAtLogin },
                     set: { setLoginItem($0) }))
-                Toggle("Benachrichtigungen anzeigen", isOn: $store.settings.notify)
-                Toggle("Hochgeladene Dateien nach „Uploaded“ verschieben",
+                Toggle("Show notifications", isOn: $store.settings.notify)
+                Toggle("Move uploaded files to “Uploaded”",
                        isOn: $store.settings.keepUploaded)
                 if store.settings.keepUploaded {
-                    LabeledContent("„Uploaded“ aufräumen") {
+                    LabeledContent("Clean up “Uploaded”") {
                         HStack {
                             Stepper(value: $store.settings.cleanupUploadedDays, in: 0...365, step: 5) {
                                 Text(store.settings.cleanupUploadedDays == 0
-                                     ? "nie"
-                                     : "nach \(Int(store.settings.cleanupUploadedDays)) Tagen")
+                                     ? String(localized: "never")
+                                     : String(format: String(localized: "after %lld days"),
+                                              Int(store.settings.cleanupUploadedDays)))
                             }
                         }
                     }
                 }
-                LabeledContent("Größenlimit") {
+                LabeledContent("Size limit") {
                     Stepper(value: $store.settings.maxMB, in: 5...500, step: 5) {
-                        Text("\(Int(store.settings.maxMB)) MB pro Datei")
+                        Text(String(format: String(localized: "%lld MB per file"), Int(store.settings.maxMB)))
                     }
                 }
-                LabeledContent("Standard-Zielordner") {
+                LabeledContent("Default destination folder") {
                     TextField("", text: $store.settings.defaultTargetFolder, prompt: Text("/Inbox"))
                         .textFieldStyle(.roundedBorder)
                         .labelsHidden()
                 }
             }
 
-            Section("Konverter") {
-                ConverterRow(name: "LibreOffice", detail: "Office-Dokumente → PDF",
+            Section("Converters") {
+                ConverterRow(name: "LibreOffice", detail: "Office documents → PDF",
                              path: $store.settings.sofficePath)
                 ConverterRow(name: "Calibre", detail: "Text, HTML, MOBI → EPUB",
                              path: $store.settings.ebookConvertPath)
                 LabeledContent("sips") {
                     HStack(spacing: 8) {
                         StatusDot(ok: true)
-                        Text("Bilder → PDF, Teil von macOS").foregroundStyle(.secondary)
+                        Text("Images → PDF, part of macOS").foregroundStyle(.secondary)
                     }
                 }
             }
         }
         .formStyle(.grouped)
         .sheet(isPresented: $showPairing) { PairingSheet() }
-        .alert("Fehler", isPresented: Binding(
+        .alert("Error", isPresented: Binding(
             get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("OK", role: .cancel) { errorMessage = nil }
         } message: {
@@ -146,14 +147,14 @@ struct GeneralTab: View {
                 Text("→ \(latest)")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.orange)
-                    .help("Auf GitHub liegt \(latest) — „Aktualisieren\u{201C} holt sie.")
+                    .help(String(format: String(localized: "GitHub has %@ — “Update” fetches it."), latest))
             } else if RmapiClient.isInstalled {
-                Text("aktuell")
+                Text("up to date")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .help("Neueste Version auf GitHub: \(latest)")
+                    .help(String(format: String(localized: "Latest version on GitHub: %@"), latest))
             } else {
-                Text("verfügbar: \(latest)")
+                Text(String(format: String(localized: "available: %@"), latest))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -162,19 +163,19 @@ struct GeneralTab: View {
 
     private func install() {
         isInstalling = true
-        installMessage = "Starte …"
+        installMessage = String(localized: "Starting…")
         Task {
             do {
                 let version = try await RmapiClient.install { message in
                     Task { @MainActor in installMessage = message }
                 }
                 await MainActor.run {
-                    installMessage = "Bereit: \(version)"
+                    installMessage = String(format: String(localized: "Ready: %@"), version)
                     isInstalling = false
                     coordinator.refreshStatus()
                     coordinator.applySettings()
                 }
-                Log.shared.info("rmapi installiert: \(version)")
+                Log.shared.info(String(format: String(localized: "rmapi installed: %@"), version))
             } catch {
                 await MainActor.run {
                     installMessage = ""
@@ -190,14 +191,15 @@ struct GeneralTab: View {
             try LoginItem.set(enabled)
             store.settings.launchAtLogin = enabled
         } catch {
-            errorMessage = "Anmeldeobjekt ließ sich nicht setzen: \(error.localizedDescription)"
+            errorMessage = String(format: String(localized: "Could not set the login item: %@"),
+                                  error.localizedDescription)
         }
     }
 }
 
 struct ConverterRow: View {
     let name: String
-    let detail: String
+    let detail: LocalizedStringKey
     @Binding var path: String
 
     var body: some View {
@@ -209,7 +211,7 @@ struct ConverterRow: View {
                     Text(path).font(.caption2).foregroundStyle(.tertiary).lineLimit(1).truncationMode(.middle)
                 }
                 Spacer()
-                Button("Wählen …") { choose() }
+                Button("Choose…") { choose() }
             }
         }
     }
@@ -219,7 +221,7 @@ struct ConverterRow: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.treatsFilePackagesAsDirectories = true
-        panel.message = "\(name)-Programm auswählen"
+        panel.message = String(format: String(localized: "Choose the %@ application"), name)
         if panel.runModal() == .OK, let url = panel.url { path = url.path }
     }
 }
@@ -243,19 +245,19 @@ struct PairingSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Mit reMarkable koppeln").font(.headline)
+            Text("Pair with reMarkable").font(.headline)
             Text("""
-                 Hol dir den 8-stelligen Einmalcode von my.remarkable.com und trag ihn hier ein. \
-                 Die App meldet sich damit als zusätzliches Gerät an; du kannst die Verbindung \
-                 in deinem Konto jederzeit wieder entziehen.
+                 Get the 8-character one-time code from my.remarkable.com and enter it here. \
+                 The app then registers as an additional device; you can revoke that connection \
+                 in your account at any time.
                  """)
             .font(.callout)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
 
-            Button("Code-Seite öffnen") { NSWorkspace.shared.open(RmapiClient.connectURL) }
+            Button("Open code page") { NSWorkspace.shared.open(RmapiClient.connectURL) }
 
-            TextField("z. B. abcdefgh", text: $code)
+            TextField("e.g. abcdefgh", text: $code)
                 .textFieldStyle(.roundedBorder)
                 .font(.system(.title3, design: .monospaced))
                 .disabled(isPairing)
@@ -268,8 +270,8 @@ struct PairingSheet: View {
             HStack {
                 if isPairing { ProgressView().controlSize(.small) }
                 Spacer()
-                Button("Abbrechen") { dismiss() }
-                Button("Koppeln") { pair() }
+                Button("Cancel") { dismiss() }
+                Button("Pair") { pair() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(code.trimmingCharacters(in: .whitespaces).isEmpty || isPairing)
             }
@@ -289,7 +291,7 @@ struct PairingSheet: View {
                     isPairing = false
                     Coordinator.shared.refreshStatus()
                     Coordinator.shared.applySettings()
-                    Log.shared.success("Konto gekoppelt")
+                    Log.shared.success(String(localized: "Account paired"))
                     dismiss()
                 }
             } catch {

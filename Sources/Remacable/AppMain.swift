@@ -72,7 +72,7 @@ final class StatusItemController: NSObject {
         statusItem = item
 
         if let button = item.button {
-            button.toolTip = "Remacable — Dateien auf dieses Symbol ziehen"
+            button.toolTip = String(localized: "Remacable — drag files onto this icon")
             // Der Knopf selbst reagiert auf Klicks …
             button.target = self
             button.action = #selector(handleClick)
@@ -143,7 +143,7 @@ final class StatusDropView: NSView {
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("nicht unterstützt") }
+    required init?(coder: NSCoder) { fatalError("not supported") }
 
     override func mouseDown(with event: NSEvent) {
         onClick?()
@@ -226,13 +226,13 @@ struct MenuView: View {
             if !RmapiClient.isInstalled || !coordinator.isPaired {
                 setupHint
             } else {
-                Toggle("Überwachung aktiv", isOn: Binding(
+                Toggle("Watching active", isOn: Binding(
                     get: { settings.settings.watchingEnabled },
                     set: { coordinator.setWatching($0) }))
                 .toggleStyle(.switch)
                 .padding(.horizontal, 8)
 
-                Label("Dateien lassen sich direkt auf das Symbol in der Menüleiste ziehen.",
+                Label("You can drag files straight onto the menu bar icon.",
                       systemImage: "arrow.up.doc")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -242,24 +242,24 @@ struct MenuView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 1) {
-                MenuRow(title: "Dateien auswählen …", systemImage: "doc.badge.plus",
+                MenuRow(title: "Choose Files…", systemImage: "doc.badge.plus",
                         enabled: coordinator.isPaired) { chooseFiles() }
-                MenuRow(title: "Jetzt prüfen", systemImage: "arrow.clockwise",
+                MenuRow(title: "Check Now", systemImage: "arrow.clockwise",
                         enabled: coordinator.isPaired && !engine.isBusy) {
                     StatusItemController.shared.closePopover()
-                    UploadEngine.shared.scanAll(reason: "manuell")
+                    UploadEngine.shared.scanAll(reason: String(localized: "manual"))
                 }
-                MenuRow(title: "Watch-Ordner öffnen", systemImage: "folder") { openInbox() }
+                MenuRow(title: "Open Watch Folder", systemImage: "folder") { openInbox() }
             }
 
             Divider()
 
             VStack(alignment: .leading, spacing: 1) {
-                MenuRow(title: "Einstellungen …", systemImage: "gearshape") {
+                MenuRow(title: "Settings…", systemImage: "gearshape") {
                     StatusItemController.shared.closePopover()
                     SettingsWindowController.shared.show()
                 }
-                MenuRow(title: "Beenden", systemImage: "power") { NSApp.terminate(nil) }
+                MenuRow(title: "Quit", systemImage: "power") { NSApp.terminate(nil) }
             }
         }
         .padding(10)
@@ -272,7 +272,7 @@ struct MenuView: View {
                 Circle()
                     .fill(statusColor)
                     .frame(width: 8, height: 8)
-                Text(coordinator.isWatching ? "Überwachung läuft" : "Überwachung aus")
+                Text(coordinator.isWatching ? "Watching is on" : "Watching is off")
                     .font(.headline)
                 if engine.isBusy { ProgressView().controlSize(.small) }
             }
@@ -292,9 +292,9 @@ struct MenuView: View {
 
     private var setupHint: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(RmapiClient.isInstalled ? "Konto noch nicht gekoppelt" : "Noch nicht eingerichtet")
+            Text(RmapiClient.isInstalled ? "Account not paired yet" : "Not set up yet")
                 .font(.callout.weight(.medium))
-            Text("In den Einstellungen einrichten — das dauert eine Minute.")
+            Text("Set it up in Settings — it takes a minute.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -309,7 +309,7 @@ struct MenuView: View {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        panel.message = "Dateien ans reMarkable schicken"
+        panel.message = String(localized: "Send files to your reMarkable")
         if panel.runModal() == .OK {
             UploadEngine.shared.send(files: panel.urls)
         }
@@ -325,7 +325,7 @@ struct MenuView: View {
 
 /// Zeile im Menue — sieht aus wie ein Menueeintrag, inklusive Hervorhebung.
 struct MenuRow: View {
-    let title: String
+    let title: LocalizedStringKey
     let systemImage: String
     var enabled: Bool = true
     let action: () -> Void

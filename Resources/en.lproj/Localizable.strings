@@ -1,0 +1,4 @@
+/* Die englischen Texte stehen als Schluessel direkt im Quelltext.
+   Diese Tabelle bleibt daher leer — nicht gefundene Schluessel werden
+   unveraendert angezeigt, und das ist genau der englische Text.
+   Die Datei existiert, damit macOS Englisch als Sprache der App erkennt. */

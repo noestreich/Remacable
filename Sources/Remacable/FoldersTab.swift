@@ -15,7 +15,7 @@ struct FoldersTab: View {
                     .frame(minWidth: 340, maxWidth: .infinity)
             }
             Divider()
-            Label("Solange dieses Fenster offen ist, wird nicht automatisch hochgeladen.",
+            Label("While this window is open, nothing is uploaded automatically.",
                   systemImage: "info.circle")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -75,7 +75,7 @@ struct FoldersTab: View {
                 .id(store.settings.sources[index].id)
         } else {
             VStack {
-                Text("Kein Ordner ausgewählt").foregroundStyle(.secondary)
+                Text("No folder selected").foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -86,7 +86,7 @@ struct FoldersTab: View {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
-        panel.message = "Ordner auswählen, der überwacht werden soll"
+        panel.message = String(localized: "Choose a folder to watch")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         var source = WatchSource(path: url.path)
         source.targetFolder = store.settings.defaultTargetFolder
@@ -128,92 +128,95 @@ struct SourceDetail: View {
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: "pause.circle.fill").foregroundStyle(.orange)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Dieser Ordner ist noch inaktiv.")
+                            Text("This folder is still switched off.")
                                 .font(.callout.weight(.medium))
-                            Text("Bis du ihn einschaltest, passiert nichts — Zeit, alles in Ruhe einzustellen.")
+                            Text("Nothing happens until you switch it on — time to set everything up in peace.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Button("Einschalten") {
+                        Button("Switch on") {
                             SourceActivation.set(true, sourceID: source.id)
                         }
                     }
                 }
             }
 
-            Section("Ordner") {
-                LabeledContent("Pfad") {
+            Section("Folder") {
+                LabeledContent("Path") {
                     HStack {
                         Text(source.url.path)
                             .lineLimit(1).truncationMode(.middle)
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Button("Ändern …") { choosePath() }
+                        Button("Change…") { choosePath() }
                     }
                 }
-                LabeledContent("Zielordner in der Cloud") {
+                LabeledContent("Destination folder in the cloud") {
                     TextField("", text: $source.targetFolder, prompt: Text("/Inbox"))
                         .textFieldStyle(.roundedBorder)
                         .labelsHidden()
                 }
-                Toggle("Unterordner in der Cloud spiegeln", isOn: $source.subfolders)
+                Toggle("Mirror subfolders in the cloud", isOn: $source.subfolders)
                 Text(source.subfolders
-                     ? "„\(source.displayName)/Zeitungen/x.pdf“ landet in „\(source.targetFolder)/Zeitungen“."
-                     : "Nur Dateien direkt in diesem Ordner werden hochgeladen.")
+                     ? String(format: String(localized: "“%@/Papers/x.pdf” ends up in “%@/Papers”."),
+                              source.displayName, source.targetFolder)
+                     : String(localized: "Only files directly in this folder are uploaded."))
                     .font(.caption).foregroundStyle(.secondary)
             }
 
-            Section("Nach dem Upload") {
+            Section("After the upload") {
                 Picker("", selection: $source.move) {
-                    Text("Datei nach „Uploaded“ verschieben").tag(true)
-                    Text("Datei unberührt liegen lassen").tag(false)
+                    Text("Move the file to “Uploaded”").tag(true)
+                    Text("Leave the file untouched").tag(false)
                 }
                 .pickerStyle(.radioGroup)
                 .labelsHidden()
                 Text(source.move
-                     ? "Legt in diesem Ordner die Unterordner „Uploaded“ und „Failed“ an."
-                     : "Für Ordner, die jemand anders verwaltet: nichts wird verschoben, keine Unterordner angelegt. Ein Merkzettel hält fest, was schon oben ist; ändert sich die Datei, geht sie erneut hoch.")
+                     ? "Creates the subfolders “Uploaded” and “Failed” inside this folder."
+                     : "For folders someone else manages: nothing is moved, no subfolders are created. A record keeps track of what already went up; if the file changes, it is uploaded again.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
             Section("Filter") {
-                LabeledContent("Dateimuster") {
+                LabeledContent("File pattern") {
                     TextField("", text: Binding(
                         get: { source.patternText },
                         set: { source.patternText = $0 }), prompt: Text("*"))
                     .textFieldStyle(.roundedBorder)
                     .labelsHidden()
                 }
-                Text("Mehrere durch Komma trennen, z. B. „Zeitung_*.pdf, *.epub“.")
+                Text("Separate several with commas, e.g. “Paper_*.pdf, *.epub”.")
                     .font(.caption).foregroundStyle(.secondary)
 
-                LabeledContent("Nur neuere Dateien") {
+                LabeledContent("Only newer files") {
                     Stepper(value: $source.maxAgeDays, in: 0...365, step: 1) {
                         Text(source.maxAgeDays == 0
-                             ? "alle, egal wie alt"
-                             : "jünger als \(Int(source.maxAgeDays)) Tage")
+                             ? String(localized: "all, however old")
+                             : String(format: String(localized: "newer than %lld days"),
+                                      Int(source.maxAgeDays)))
                     }
                 }
-                LabeledContent("Wartezeit vor dem Upload") {
+                LabeledContent("Wait before uploading") {
                     Stepper(value: $source.stableWait, in: 0...60, step: 1) {
                         Text("\(Int(source.stableWait)) s")
                     }
                 }
-                Text("Die Wartezeit prüft, ob die Datei noch wächst — höher setzen, wenn ein anderes Programm sie nachträglich bearbeitet.")
+                Text("The wait checks whether the file is still growing — raise it if another program edits the file afterwards.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
-            Section("Zurzeit") {
+            Section("Right now") {
                 if let preview {
                     if preview.matching > 0 {
                         Label(preview.matching == 1
-                              ? "Eine Datei wartet auf den Upload"
-                              : "\(preview.matching) Dateien warten auf den Upload",
+                              ? String(localized: "One file is waiting to be uploaded")
+                              : String(format: String(localized: "%lld files are waiting to be uploaded"),
+                                       preview.matching),
                               systemImage: "arrow.up.circle.fill")
                             .foregroundStyle(.green)
                     } else {
                         VStack(alignment: .leading, spacing: 3) {
-                            Label("Nichts zu tun", systemImage: "checkmark.circle")
+                            Label("Nothing to do", systemImage: "checkmark.circle")
                             ForEach(reasons(preview), id: \.self) { reason in
                                 Text("• " + reason)
                                     .font(.caption).foregroundStyle(.secondary)
@@ -223,10 +226,10 @@ struct SourceDetail: View {
 
                     if preview.known > 0 {
                         HStack {
-                            Text("Merkzettel: \(preview.known) Datei(en) gelten als erledigt")
+                            Text(String(format: String(localized: "Upload memory: %lld file(s) count as done"), preview.known))
                                 .font(.caption).foregroundStyle(.secondary)
                             Spacer()
-                            Button("Zurücksetzen") {
+                            Button("Reset") {
                                 UploadEngine.shared.forget(source: source)
                                 refreshPreview()
                             }
@@ -235,26 +238,26 @@ struct SourceDetail: View {
                 }
             }
 
-            Section("Umbenennen") {
+            Section("Renaming") {
                 if source.renameRules.isEmpty {
-                    Text("Ohne Regel wird der Dateiname zum Titel auf dem Gerät.")
+                    Text("Without a rule, the file name becomes the title on the device.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 ForEach($source.renameRules) { $rule in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
-                            TextField("Muster (regulärer Ausdruck)", text: $rule.match)
+                            TextField("Pattern (regular expression)", text: $rule.match)
                             Button {
                                 source.renameRules.removeAll { $0.id == rule.id }
                             } label: { Image(systemName: "minus.circle") }
                             .buttonStyle(.borderless)
                         }
-                        TextField("Titel, z. B. Zeitung \\3-\\2-\\1", text: $rule.title)
+                        TextField("Title, e.g. Paper \\3-\\2-\\1", text: $rule.title)
                     }
                     .textFieldStyle(.roundedBorder)
                     .padding(.vertical, 2)
                 }
-                Button("Regel hinzufügen") { source.renameRules.append(RenameRule()) }
+                Button("Add rule") { source.renameRules.append(RenameRule()) }
             }
         }
         .formStyle(.grouped)
@@ -274,18 +277,21 @@ struct SourceDetail: View {
     private func reasons(_ preview: Preview) -> [String] {
         var list: [String] = []
         if preview.stats.tooOld > 0 {
-            list.append("\(preview.stats.tooOld) Datei(en) sind älter als \(Int(source.maxAgeDays)) Tage")
+            list.append(String(format: String(localized: "%lld file(s) are older than %lld days"),
+                               preview.stats.tooOld, Int(source.maxAgeDays)))
         }
         if preview.stats.known > 0 {
-            list.append("\(preview.stats.known) Datei(en) wurden schon hochgeladen")
+            list.append(String(format: String(localized: "%lld file(s) have already been uploaded"),
+                               preview.stats.known))
         }
         if preview.stats.pattern > 0 {
-            list.append("\(preview.stats.pattern) Datei(en) passen nicht zum Muster")
+            list.append(String(format: String(localized: "%lld file(s) do not match the pattern"),
+                               preview.stats.pattern))
         }
         if list.isEmpty {
             list.append(preview.stats.total == 0
-                        ? "Der Ordner enthält keine Dateien"
-                        : "Alles erledigt")
+                        ? String(localized: "The folder contains no files")
+                        : String(localized: "Everything done"))
         }
         return list
     }
@@ -332,9 +338,9 @@ struct LogTab: View {
             }
             Divider()
             HStack {
-                Text("\(log.entries.count) Einträge").font(.caption).foregroundStyle(.secondary)
+                Text(String(format: String(localized: "%lld entries"), log.entries.count)).font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Button("Logdatei zeigen") {
+                Button("Show log file") {
                     NSWorkspace.shared.activateFileViewerSelecting([Paths.logFile])
                 }
             }
@@ -376,19 +382,21 @@ enum SourceActivation {
 
         let alert = NSAlert()
         alert.messageText = pending.count == 1
-            ? "In diesem Ordner liegt bereits eine passende Datei"
-            : "In diesem Ordner liegen bereits \(pending.count) passende Dateien"
-        alert.informativeText = "Sollen die jetzt mit hochgeladen werden, oder nur alles, was ab jetzt dazukommt?"
-        alert.addButton(withTitle: "Alle hochladen")
-        alert.addButton(withTitle: "Nur künftige")
-        alert.addButton(withTitle: "Abbrechen")
+            ? String(localized: "This folder already contains one matching file")
+            : String(format: String(localized: "This folder already contains %lld matching files"),
+                     pending.count)
+        alert.informativeText = String(localized: "Upload those as well, or only whatever arrives from now on?")
+        alert.addButton(withTitle: String(localized: "Upload all"))
+        alert.addButton(withTitle: String(localized: "Only future ones"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
 
         switch alert.runModal() {
         case .alertFirstButtonReturn:
             activate(at: index)
         case .alertSecondButtonReturn:
             UploadEngine.shared.markAsSeen(pending)
-            Log.shared.info("\(pending.count) vorhandene Datei(en) als erledigt abgehakt")
+            Log.shared.info(String(format: String(localized: "Marked %lld existing file(s) as done"),
+                                   pending.count))
             activate(at: index)
         default:
             break  // bleibt inaktiv

@@ -83,7 +83,7 @@ enum RmapiClient {
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200,
               let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw RmapiError.download("GitHub antwortet nicht wie erwartet")
+            throw RmapiError.download(String(localized: "GitHub did not respond as expected"))
         }
         return json
     }
@@ -91,7 +91,7 @@ enum RmapiClient {
     /// Neueste veroeffentlichte Version — nur die Nummer, ohne Download.
     static func latestVersion() async throws -> String {
         guard let tag = try await fetchLatestRelease()["tag_name"] as? String else {
-            throw RmapiError.download("Release ohne Versionsangabe")
+            throw RmapiError.download(String(localized: "Release has no version number"))
         }
         return tag
     }
@@ -118,7 +118,7 @@ enum RmapiClient {
 
     /// Laedt das aktuelle Release von GitHub und legt das Binary bereit.
     static func install(progress: @escaping (String) -> Void) async throws -> String {
-        progress("Suche aktuelles Release …")
+        progress(String(localized: "Looking for the latest release…"))
         let json = try await fetchLatestRelease()
 
         #if arch(arm64)
@@ -131,11 +131,11 @@ enum RmapiClient {
               let asset = assets.first(where: { ($0["name"] as? String) == assetName }),
               let urlString = asset["browser_download_url"] as? String,
               let downloadURL = URL(string: urlString) else {
-            throw RmapiError.download("Kein passendes Paket (\(assetName)) im Release gefunden")
+            throw RmapiError.download(String(format: String(localized: "No matching package (%@) in the release"), assetName))
         }
         let tag = (json["tag_name"] as? String) ?? "?"
 
-        progress("Lade \(assetName) (\(tag)) …")
+        progress(String(format: String(localized: "Downloading %@ (%@)…"), assetName, tag))
         let (tempFile, _) = try await URLSession.shared.download(from: downloadURL)
 
         let workDir = FileManager.default.temporaryDirectory
@@ -146,14 +146,14 @@ enum RmapiClient {
         let zipFile = workDir.appendingPathComponent(assetName)
         try FileManager.default.moveItem(at: tempFile, to: zipFile)
 
-        progress("Entpacke …")
+        progress(String(localized: "Extracting…"))
         _ = try ProcessRunner.run("/usr/bin/unzip", ["-o", "-j", "-q", zipFile.path, "-d", workDir.path],
                                   timeout: 120)
 
         guard let extracted = try FileManager.default
             .contentsOfDirectory(at: workDir, includingPropertiesForKeys: nil)
             .first(where: { $0.lastPathComponent == "rmapi" }) else {
-            throw RmapiError.download("Im Archiv war kein rmapi-Binary")
+            throw RmapiError.download(String(localized: "The archive contained no rmapi binary"))
         }
 
         let binDir = Paths.rmapiBinary.deletingLastPathComponent()
@@ -168,7 +168,7 @@ enum RmapiClient {
                                    timeout: 30)
 
         let installed = version() ?? tag
-        progress("Installiert: \(installed)")
+        progress(String(format: String(localized: "Installed: %@"), installed))
         return installed
     }
 }
@@ -181,9 +181,9 @@ enum RmapiError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notInstalled: return "rmapi ist noch nicht installiert."
-        case .notPaired: return "Das Konto ist noch nicht gekoppelt."
-        case .invalidCode: return "Bitte den 8-stelligen Code eingeben."
+        case .notInstalled: return String(localized: "rmapi is not installed yet.")
+        case .notPaired: return String(localized: "The account is not paired yet.")
+        case .invalidCode: return String(localized: "Please enter the 8-character code.")
         case .download(let message): return message
         }
     }

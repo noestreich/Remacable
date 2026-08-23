@@ -44,7 +44,7 @@ struct Converter {
             ], timeout: 900)
             let out = workDir.appendingPathComponent(source.deletingPathExtension().lastPathComponent + ".pdf")
             guard FileManager.default.fileExists(atPath: out.path) else {
-                throw ConversionError.failed("LibreOffice konnte \(source.lastPathComponent) nicht wandeln")
+                throw ConversionError.failed(String(format: String(localized: "LibreOffice could not convert %@"), source.lastPathComponent))
             }
             return out
         }
@@ -56,7 +56,7 @@ struct Converter {
             let out = workDir.appendingPathComponent(source.deletingPathExtension().lastPathComponent + ".epub")
             _ = try? ProcessRunner.run(ebookConvertPath, [source.path, out.path], timeout: 900)
             guard FileManager.default.fileExists(atPath: out.path) else {
-                throw ConversionError.failed("Calibre konnte \(source.lastPathComponent) nicht wandeln")
+                throw ConversionError.failed(String(format: String(localized: "Calibre could not convert %@"), source.lastPathComponent))
             }
             return out
         }
@@ -67,12 +67,12 @@ struct Converter {
                                        ["-s", "format", "pdf", source.path, "--out", out.path],
                                        timeout: 300)
             guard FileManager.default.fileExists(atPath: out.path) else {
-                throw ConversionError.failed("Bild \(source.lastPathComponent) ließ sich nicht wandeln")
+                throw ConversionError.failed(String(format: String(localized: "Could not convert image %@"), source.lastPathComponent))
             }
             return out
         }
 
-        throw ConversionError.unsupported(ext.isEmpty ? "ohne Endung" : ext)
+        throw ConversionError.unsupported(ext.isEmpty ? String(localized: "no extension") : ext)
     }
 }
 
@@ -83,8 +83,8 @@ enum ConversionError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .unsupported(let ext): return "Format \(ext) wird nicht unterstützt"
-        case .toolMissing(let tool): return "\(tool) ist nicht installiert"
+        case .unsupported(let ext): return String(format: String(localized: "Format %@ is not supported"), ext)
+        case .toolMissing(let tool): return String(format: String(localized: "%@ is not installed"), tool)
         case .failed(let message): return message
         }
     }

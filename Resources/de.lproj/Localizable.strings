@@ -1,0 +1,184 @@
+/* Deutsche Fassung. Schluessel sind die englischen Texte aus dem Quelltext. */
+
+/* Menueleiste */
+"Remacable — drag files onto this icon" = "Remacable — Dateien auf dieses Symbol ziehen";
+"Watching active" = "Überwachung aktiv";
+"Watching is on" = "Überwachung läuft";
+"Watching is off" = "Überwachung aus";
+"You can drag files straight onto the menu bar icon." = "Dateien lassen sich direkt auf das Symbol in der Menüleiste ziehen.";
+"Choose Files…" = "Dateien auswählen …";
+"Check Now" = "Jetzt prüfen";
+"Open Watch Folder" = "Watch-Ordner öffnen";
+"Settings…" = "Einstellungen …";
+"Quit" = "Beenden";
+"Account not paired yet" = "Konto noch nicht gekoppelt";
+"Not set up yet" = "Noch nicht eingerichtet";
+"Set it up in Settings — it takes a minute." = "In den Einstellungen einrichten — das dauert eine Minute.";
+"Send files to your reMarkable" = "Dateien ans reMarkable schicken";
+
+/* Reiter */
+"General" = "Allgemein";
+"Folders" = "Ordner";
+"Log" = "Protokoll";
+
+/* Einrichtung */
+"Setup" = "Einrichtung";
+"not installed" = "nicht installiert";
+"Install" = "Installieren";
+"Update" = "Aktualisieren";
+"Account" = "Konto";
+"paired" = "gekoppelt";
+"not paired" = "nicht gekoppelt";
+"Unpair" = "Kopplung lösen";
+"Pair…" = "Koppeln …";
+"up to date" = "aktuell";
+"available: %@" = "verfügbar: %@";
+"GitHub has %@ — “Update” fetches it." = "Auf GitHub liegt %@ — „Aktualisieren“ holt sie.";
+"Latest version on GitHub: %@" = "Neueste Version auf GitHub: %@";
+"Starting…" = "Starte …";
+"Ready: %@" = "Bereit: %@";
+"rmapi installed: %@" = "rmapi installiert: %@";
+"The old launchd agent from the script version is still running." = "Der alte launchd-Agent der Skript-Fassung läuft noch.";
+"It would work through the same folders in parallel — everything would go up twice." = "Er würde dieselben Ordner parallel abarbeiten — alles ginge doppelt hoch.";
+"Disable" = "Deaktivieren";
+
+/* Verhalten */
+"Behavior" = "Verhalten";
+"Start at login" = "Beim Anmelden starten";
+"Show notifications" = "Benachrichtigungen anzeigen";
+"Move uploaded files to “Uploaded”" = "Hochgeladene Dateien nach „Uploaded“ verschieben";
+"Clean up “Uploaded”" = "„Uploaded“ aufräumen";
+"never" = "nie";
+"after %lld days" = "nach %lld Tagen";
+"Size limit" = "Größenlimit";
+"%lld MB per file" = "%lld MB pro Datei";
+"Default destination folder" = "Standard-Zielordner";
+"Could not set the login item: %@" = "Anmeldeobjekt ließ sich nicht setzen: %@";
+
+/* Konverter */
+"Converters" = "Konverter";
+"Office documents → PDF" = "Office-Dokumente → PDF";
+"Text, HTML, MOBI → EPUB" = "Text, HTML, MOBI → EPUB";
+"Images → PDF, part of macOS" = "Bilder → PDF, Teil von macOS";
+"Choose…" = "Wählen …";
+"Choose the %@ application" = "%@-Programm auswählen";
+
+/* Kopplung */
+"Pair with reMarkable" = "Mit reMarkable koppeln";
+"Get the 8-character one-time code from my.remarkable.com and enter it here. The app then registers as an additional device; you can revoke that connection in your account at any time." = "Hol dir den 8-stelligen Einmalcode von my.remarkable.com und trag ihn hier ein. Die App meldet sich damit als zusätzliches Gerät an; du kannst die Verbindung in deinem Konto jederzeit wieder entziehen.";
+"Open code page" = "Code-Seite öffnen";
+"e.g. abcdefgh" = "z. B. abcdefgh";
+"Cancel" = "Abbrechen";
+"Pair" = "Koppeln";
+"Account paired" = "Konto gekoppelt";
+"Error" = "Fehler";
+
+/* Ordner */
+"While this window is open, nothing is uploaded automatically." = "Solange dieses Fenster offen ist, wird nicht automatisch hochgeladen.";
+"No folder selected" = "Kein Ordner ausgewählt";
+"Choose a folder to watch" = "Ordner auswählen, der überwacht werden soll";
+"This folder is still switched off." = "Dieser Ordner ist noch inaktiv.";
+"Nothing happens until you switch it on — time to set everything up in peace." = "Bis du ihn einschaltest, passiert nichts — Zeit, alles in Ruhe einzustellen.";
+"Switch on" = "Einschalten";
+"Folder" = "Ordner";
+"Path" = "Pfad";
+"Change…" = "Ändern …";
+"Destination folder in the cloud" = "Zielordner in der Cloud";
+"Mirror subfolders in the cloud" = "Unterordner in der Cloud spiegeln";
+"“%@/Papers/x.pdf” ends up in “%@/Papers”." = "„%@/Zeitungen/x.pdf“ landet in „%@/Zeitungen“.";
+"Only files directly in this folder are uploaded." = "Nur Dateien direkt in diesem Ordner werden hochgeladen.";
+"After the upload" = "Nach dem Upload";
+"Move the file to “Uploaded”" = "Datei nach „Uploaded“ verschieben";
+"Leave the file untouched" = "Datei unberührt liegen lassen";
+"Creates the subfolders “Uploaded” and “Failed” inside this folder." = "Legt in diesem Ordner die Unterordner „Uploaded“ und „Failed“ an.";
+"For folders someone else manages: nothing is moved, no subfolders are created. A record keeps track of what already went up; if the file changes, it is uploaded again." = "Für Ordner, die jemand anders verwaltet: nichts wird verschoben, keine Unterordner angelegt. Ein Merkzettel hält fest, was schon oben ist; ändert sich die Datei, geht sie erneut hoch.";
+"Filter" = "Filter";
+"File pattern" = "Dateimuster";
+"Separate several with commas, e.g. “Paper_*.pdf, *.epub”." = "Mehrere durch Komma trennen, z. B. „Zeitung_*.pdf, *.epub“.";
+"Only newer files" = "Nur neuere Dateien";
+"all, however old" = "alle, egal wie alt";
+"newer than %lld days" = "jünger als %lld Tage";
+"Wait before uploading" = "Wartezeit vor dem Upload";
+"The wait checks whether the file is still growing — raise it if another program edits the file afterwards." = "Die Wartezeit prüft, ob die Datei noch wächst — höher setzen, wenn ein anderes Programm sie nachträglich bearbeitet.";
+
+/* Zurzeit */
+"Right now" = "Zurzeit";
+"One file is waiting to be uploaded" = "Eine Datei wartet auf den Upload";
+"%lld files are waiting to be uploaded" = "%lld Dateien warten auf den Upload";
+"Nothing to do" = "Nichts zu tun";
+"%lld file(s) are older than %lld days" = "%lld Datei(en) sind älter als %lld Tage";
+"%lld file(s) have already been uploaded" = "%lld Datei(en) wurden schon hochgeladen";
+"%lld file(s) do not match the pattern" = "%lld Datei(en) passen nicht zum Muster";
+"The folder contains no files" = "Der Ordner enthält keine Dateien";
+"Everything done" = "Alles erledigt";
+"Upload memory: %lld file(s) count as done" = "Merkzettel: %lld Datei(en) gelten als erledigt";
+"Reset" = "Zurücksetzen";
+
+/* Umbenennen */
+"Renaming" = "Umbenennen";
+"Without a rule, the file name becomes the title on the device." = "Ohne Regel wird der Dateiname zum Titel auf dem Gerät.";
+"Pattern (regular expression)" = "Muster (regulärer Ausdruck)";
+"Title, e.g. Paper \\3-\\2-\\1" = "Titel, z. B. Zeitung \\3-\\2-\\1";
+"Add rule" = "Regel hinzufügen";
+
+/* Einschalten mit Altbestand */
+"This folder already contains one matching file" = "In diesem Ordner liegt bereits eine passende Datei";
+"This folder already contains %lld matching files" = "In diesem Ordner liegen bereits %lld passende Dateien";
+"Upload those as well, or only whatever arrives from now on?" = "Sollen die jetzt mit hochgeladen werden, oder nur alles, was ab jetzt dazukommt?";
+"Upload all" = "Alle hochladen";
+"Only future ones" = "Nur künftige";
+"Marked %lld existing file(s) as done" = "%lld vorhandene Datei(en) als erledigt abgehakt";
+
+/* Protokoll */
+"%lld entries" = "%lld Einträge";
+"Show log file" = "Logdatei zeigen";
+
+/* Motor und Meldungen */
+"Ready" = "Bereit";
+"Failed" = "Fehlgeschlagen";
+"Checking folders…" = "Prüfe Ordner …";
+"Uploading %@…" = "Lade %@ hoch …";
+"Uploading %lld files…" = "Lade %lld Dateien hoch …";
+"Uploaded %lld document(s)" = "%lld Dokument(e) hochgeladen";
+"Remacable: Error" = "Remacable: Fehler";
+"%@: %lld file(s) — %@" = "%@: %lld Datei(en) — %@";
+"%@: %@ — will not be retried" = "%@: %@ — wird nicht erneut versucht";
+"Folder is missing: %@" = "Ordner fehlt: %@";
+"Could not file %@: %@" = "Konnte %@ nicht ablegen: %@";
+"Archive cleaned up: %@" = "Archiv aufgeräumt: %@";
+"Could not delete %@" = "Konnte %@ nicht löschen";
+"Cleared upload memory for %@ (%lld entries)" = "Merkzettel für %@ geleert (%lld Einträge)";
+"Could not start folder watching" = "Ordnerüberwachung ließ sich nicht starten";
+"Old launchd agent disabled" = "Alter launchd-Agent deaktiviert";
+"File is %.0f MB (limit is %.0f MB)" = "Datei ist %.0f MB (Limit %.0f MB)";
+
+/* Anlaesse im Protokoll */
+"manual" = "manuell";
+"periodic check" = "regelmäßige Prüfung";
+"startup" = "Start";
+"switched on" = "eingeschaltet";
+"folder changed" = "Ordner geändert";
+"settings closed" = "Einstellungen geschlossen";
+
+/* rmapi */
+"rmapi is not installed yet." = "rmapi ist noch nicht installiert.";
+"The account is not paired yet." = "Das Konto ist noch nicht gekoppelt.";
+"Please enter the 8-character code." = "Bitte den 8-stelligen Code eingeben.";
+"GitHub did not respond as expected" = "GitHub antwortet nicht wie erwartet";
+"Release has no version number" = "Release ohne Versionsangabe";
+"Looking for the latest release…" = "Suche aktuelles Release …";
+"No matching package (%@) in the release" = "Kein passendes Paket (%@) im Release gefunden";
+"Downloading %@ (%@)…" = "Lade %@ (%@) …";
+"Extracting…" = "Entpacke …";
+"The archive contained no rmapi binary" = "Im Archiv war kein rmapi-Binary";
+"Installed: %@" = "Installiert: %@";
+
+/* Konvertierung */
+"LibreOffice could not convert %@" = "LibreOffice konnte %@ nicht wandeln";
+"Calibre could not convert %@" = "Calibre konnte %@ nicht wandeln";
+"Could not convert image %@" = "Bild %@ ließ sich nicht wandeln";
+"no extension" = "ohne Endung";
+"Format %@ is not supported" = "Format %@ wird nicht unterstützt";
+"%@ is not installed" = "%@ ist nicht installiert";
+"Call failed" = "Aufruf fehlgeschlagen";
+"Timed out: %@" = "Zeitüberschreitung bei %@";

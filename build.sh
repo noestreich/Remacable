@@ -16,6 +16,10 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp ".build/release/Remacable" "$APP/Contents/MacOS/Remacable"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp Resources/MenuBarIcon.png "$APP/Contents/Resources/MenuBarIcon.png"
+# Sprachen: Englisch steckt als Schluessel im Quelltext, Deutsch in de.lproj
+for lproj in Resources/*.lproj; do
+  cp -R "$lproj" "$APP/Contents/Resources/"
+done
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -27,6 +31,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
   <key>CFBundleExecutable</key><string>Remacable</string>
   <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
   <key>CFBundleVersion</key><string>$VERSION</string>
