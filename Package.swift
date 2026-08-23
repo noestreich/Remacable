@@ -9,6 +9,7 @@ let package = Package(
             name: "Remacable",
             path: "Sources/Remacable",
             swiftSettings: [.swiftLanguageMode(.v5)]
-        )
+        ),
+        .testTarget(name: "RemacableTests", dependencies: ["Remacable"])
     ]
 )

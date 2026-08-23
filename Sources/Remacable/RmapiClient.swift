@@ -4,6 +4,9 @@ import Foundation
 /// reMarkable-Cloud-API spricht.
 enum RmapiClient {
 
+    typealias CommandRunner = (_ arguments: [String], _ timeout: TimeInterval) throws -> String
+    typealias RetryWaiter = (_ delay: TimeInterval) -> Void
+
     static let connectURL = URL(string: "https://my.remarkable.com/device/desktop/connect")!
     private static let releaseAPI = URL(string: "https://api.github.com/repos/ddvk/rmapi/releases/latest")!
 
@@ -46,20 +49,78 @@ enum RmapiClient {
 
     // MARK: Ordner und Upload
 
-    /// Legt den Zielordner Ebene fuer Ebene an; existiert er, meldet rmapi einen
-    /// Fehler, den wir ignorieren.
-    static func ensureFolder(_ folder: String) {
+    /// Legt den Zielordner Ebene fuer Ebene an und wartet, bis ein neuer Ordner
+    /// in einem frisch aufgebauten rmapi-Dateibaum sichtbar ist.
+    @discardableResult
+    static func ensureFolder(_ folder: String) throws -> String {
+        try ensureFolder(
+            folder,
+            command: { arguments, timeout in try run(arguments, timeout: timeout) },
+            wait: { Thread.sleep(forTimeInterval: $0) })
+    }
+
+    @discardableResult
+    static func ensureFolder(_ folder: String,
+                             command: CommandRunner,
+                             wait: RetryWaiter) throws -> String {
+        let parts = folder.split(separator: "/").filter { !$0.isEmpty }
+        guard !parts.isEmpty else { return try command(["ls", "/"], 120) }
+
         var path = ""
-        for part in folder.split(separator: "/") where !part.isEmpty {
+        var listing = ""
+        for part in parts {
             path += "/" + part
-            _ = try? run(["mkdir", path], timeout: 60)
+
+            do {
+                try requireDirectory(at: path, command: command)
+                listing = try command(["ls", path], 120)
+                continue
+            } catch let error as RmapiError {
+                throw error
+            } catch {
+                guard isMissingEntry(error) else { throw error }
+            }
+
+            var lastError: Error?
+            do {
+                _ = try command(["mkdir", path], 60)
+            } catch {
+                lastError = error
+            }
+
+            var visible = false
+            for attempt in 0..<4 {
+                do {
+                    try requireDirectory(at: path, command: command)
+                    listing = try command(["ls", path], 120)
+                    visible = true
+                    break
+                } catch let error as RmapiError {
+                    throw error
+                } catch {
+                    lastError = error
+                    if attempt < 3 { wait(0.25 * pow(2, Double(attempt))) }
+                }
+            }
+            if !visible, let lastError { throw lastError }
         }
+        return listing
+    }
+
+    static func requireDirectory(at path: String, command: CommandRunner) throws {
+        let output = try command(["stat", path], 120)
+        guard let data = output.data(using: .utf8),
+              let metadata = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let type = metadata["Type"] as? String else {
+            throw RmapiError.invalidMetadata(path)
+        }
+        guard type == "CollectionType" else { throw RmapiError.destinationIsDocument(path) }
     }
 
     /// Namen im Zielordner — damit lassen sich Kollisionen abfangen, bevor
     /// `put` daran scheitert.
-    static func entries(in folder: String) -> Set<String> {
-        guard let output = try? run(["ls", folder], timeout: 120) else { return [] }
+    static func entries(in folder: String) throws -> Set<String> {
+        let output = try ensureFolder(folder)
         var names = Set<String>()
         for line in output.components(separatedBy: .newlines) {
             let parts = line.components(separatedBy: "\t")
@@ -71,7 +132,36 @@ enum RmapiClient {
     }
 
     static func put(file: URL, folder: String) throws {
-        _ = try run(["put", file.path, folder], timeout: 1800)
+        try put(
+            file: file,
+            folder: folder,
+            command: { arguments, timeout in try run(arguments, timeout: timeout) },
+            wait: { Thread.sleep(forTimeInterval: $0) })
+    }
+
+    static func put(file: URL,
+                    folder: String,
+                    command: CommandRunner,
+                    wait: RetryWaiter) throws {
+        do {
+            _ = try command(["put", file.path, folder], 1800)
+        } catch {
+            guard isMissingDirectory(error) else { throw error }
+            _ = try ensureFolder(folder, command: command, wait: wait)
+            _ = try command(["put", file.path, folder], 1800)
+        }
+    }
+
+    static func isMissingDirectory(_ error: Error) -> Bool {
+        let message = error.localizedDescription.lowercased()
+        return message.contains("directory doesn't exist")
+            || message.contains("directory does not exist")
+    }
+
+    static func isMissingEntry(_ error: Error) -> Bool {
+        let message = error.localizedDescription.lowercased()
+        return message.contains("file doesn't exist")
+            || message.contains("file does not exist")
     }
 
     // MARK: Versionen
@@ -177,6 +267,8 @@ enum RmapiError: LocalizedError {
     case notInstalled
     case notPaired
     case invalidCode
+    case destinationIsDocument(String)
+    case invalidMetadata(String)
     case download(String)
 
     var errorDescription: String? {
@@ -184,6 +276,10 @@ enum RmapiError: LocalizedError {
         case .notInstalled: return String(localized: "rmapi is not installed yet.")
         case .notPaired: return String(localized: "The account is not paired yet.")
         case .invalidCode: return String(localized: "Please enter the 8-character code.")
+        case .destinationIsDocument(let path):
+            return String(format: String(localized: "The destination %@ is a document, not a folder. Please pick a different destination folder."), path)
+        case .invalidMetadata(let path):
+            return String(format: String(localized: "Could not read the cloud metadata for %@."), path)
         case .download(let message): return message
         }
     }

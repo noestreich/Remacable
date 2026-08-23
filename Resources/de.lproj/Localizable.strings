@@ -164,6 +164,8 @@
 "rmapi is not installed yet." = "rmapi ist noch nicht installiert.";
 "The account is not paired yet." = "Das Konto ist noch nicht gekoppelt.";
 "Please enter the 8-character code." = "Bitte den 8-stelligen Code eingeben.";
+"The destination %@ is a document, not a folder. Please pick a different destination folder." = "Der Zielpfad %@ ist ein Dokument, kein Ordner. Bitte wähle einen anderen Zielordner.";
+"Could not read the cloud metadata for %@." = "Die Cloud-Metadaten für %@ konnten nicht gelesen werden.";
 "GitHub did not respond as expected" = "GitHub antwortet nicht wie erwartet";
 "Release has no version number" = "Release ohne Versionsangabe";
 "Looking for the latest release…" = "Suche aktuelles Release …";

@@ -196,9 +196,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             created.setContentSize(NSSize(width: 640, height: 540))
             created.contentMinSize = NSSize(width: 520, height: 400)
             created.isReleasedWhenClosed = false
-            created.setFrameAutosaveName("SettingsWindow")  // Groesse und Position merken
             created.delegate = self
-            created.center()
+            // Das Fenster wird beim Schliessen freigegeben und hier neu gebaut —
+            // Groesse und Position kommen daher aus der gesicherten Ablage, sonst
+            // stuende es jedes Mal wieder mittig in Standardgroesse.
+            created.setFrameAutosaveName("SettingsWindow")
+            if !created.setFrameUsingName("SettingsWindow") { created.center() }
             window = created
         }
         Coordinator.shared.refreshStatus()
