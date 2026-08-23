@@ -16,6 +16,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp ".build/release/Remacable" "$APP/Contents/MacOS/Remacable"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp Resources/MenuBarIcon.png "$APP/Contents/Resources/MenuBarIcon.png"
+cp -R ".build/release/Remacable_Remacable.bundle" "$APP/Contents/Resources/"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -27,6 +28,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
   <key>CFBundleExecutable</key><string>Remacable</string>
   <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleLocalizations</key>
+  <array><string>en</string><string>de</string></array>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
   <key>CFBundleVersion</key><string>$VERSION</string>
@@ -41,8 +45,11 @@ PLIST
 # Mit Developer ID signieren, wenn eine im Schluesselbund liegt — nur so laesst
 # sich die App spaeter beurkunden (notarisieren). Sonst ad-hoc, dann muss man
 # sie beim ersten Start ueber die Systemeinstellungen freigeben.
-IDENTITY="${SIGN_IDENTITY:-$(security find-identity -v -p codesigning 2>/dev/null \
-  | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)"$/\1/')}"
+IDENTITY="${SIGN_IDENTITY:-}"
+if [ -z "$IDENTITY" ]; then
+  IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
+    | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)"$/\1/' || true)"
+fi
 
 if [ -n "$IDENTITY" ]; then
   echo "==> Signieren: $IDENTITY"

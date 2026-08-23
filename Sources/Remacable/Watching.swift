@@ -42,7 +42,7 @@ final class FolderWatcher {
         guard let created = FSEventStreamCreate(
             kCFAllocatorDefault, callback, &context, unique as CFArray,
             FSEventStreamEventId(kFSEventStreamEventIdSinceNow), 1.0, flags) else {
-            Log.shared.error("Ordnerüberwachung ließ sich nicht starten")
+            Log.shared.error(tr("error.watcher.start"))
             return
         }
         stream = created
@@ -128,7 +128,7 @@ final class Coordinator: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, self.isWatching else { return }
-                self.requestScan(reason: "regelmäßige Prüfung")
+                self.requestScan(reason: tr("scan.reason.periodic"))
             }
         }
         checkRmapiVersion()
@@ -136,7 +136,7 @@ final class Coordinator: ObservableObject {
             Task { @MainActor in self?.checkRmapiVersion() }
         }
         if SettingsStore.shared.settings.watchingEnabled {
-            UploadEngine.shared.scanAll(reason: "Start")
+            UploadEngine.shared.scanAll(reason: tr("scan.reason.start"))
         }
     }
 
@@ -179,12 +179,12 @@ final class Coordinator: ObservableObject {
     func setWatching(_ enabled: Bool) {
         SettingsStore.shared.settings.watchingEnabled = enabled
         applySettings()
-        if enabled { UploadEngine.shared.scanAll(reason: "eingeschaltet") }
+        if enabled { UploadEngine.shared.scanAll(reason: tr("scan.reason.enabled")) }
     }
 
     private func handleChange() {
         guard isWatching else { return }
-        requestScan(reason: "Ordner geändert")
+        requestScan(reason: tr("scan.reason.folder_changed"))
     }
 
     private func requestScan(reason: String) {
@@ -202,7 +202,7 @@ final class Coordinator: ObservableObject {
         applySettings()
         guard missedScan else { return }
         missedScan = false
-        UploadEngine.shared.scanAll(reason: "Einstellungen geschlossen")
+        UploadEngine.shared.scanAll(reason: tr("scan.reason.settings_closed"))
     }
 
     /// Der launchd-Agent der Skript-Fassung wuerde parallel dieselben Ordner
@@ -215,7 +215,7 @@ final class Coordinator: ObservableObject {
         let disabled = plist.appendingPathExtension("disabled")
         try? FileManager.default.removeItem(at: disabled)
         try? FileManager.default.moveItem(at: plist, to: disabled)
-        Log.shared.info("Alter launchd-Agent deaktiviert")
+        Log.shared.info(tr("log.legacy_agent_disabled"))
         refreshStatus()
     }
 }

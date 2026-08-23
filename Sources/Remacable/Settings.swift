@@ -59,6 +59,32 @@ struct AppSettings: Codable {
     var sofficePath: String = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
     var ebookConvertPath: String = "/Applications/calibre.app/Contents/MacOS/ebook-convert"
     var defaultTargetFolder: String = "/Inbox"
+    var language: AppLanguage = .system
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let defaults = AppSettings()
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        sources = try values.decodeIfPresent([WatchSource].self, forKey: .sources) ?? defaults.sources
+        watchingEnabled = try values.decodeIfPresent(Bool.self, forKey: .watchingEnabled)
+            ?? defaults.watchingEnabled
+        keepUploaded = try values.decodeIfPresent(Bool.self, forKey: .keepUploaded)
+            ?? defaults.keepUploaded
+        cleanupUploadedDays = try values.decodeIfPresent(Double.self, forKey: .cleanupUploadedDays)
+            ?? defaults.cleanupUploadedDays
+        notify = try values.decodeIfPresent(Bool.self, forKey: .notify) ?? defaults.notify
+        maxMB = try values.decodeIfPresent(Double.self, forKey: .maxMB) ?? defaults.maxMB
+        launchAtLogin = try values.decodeIfPresent(Bool.self, forKey: .launchAtLogin)
+            ?? defaults.launchAtLogin
+        sofficePath = try values.decodeIfPresent(String.self, forKey: .sofficePath)
+            ?? defaults.sofficePath
+        ebookConvertPath = try values.decodeIfPresent(String.self, forKey: .ebookConvertPath)
+            ?? defaults.ebookConvertPath
+        defaultTargetFolder = try values.decodeIfPresent(String.self, forKey: .defaultTargetFolder)
+            ?? defaults.defaultTargetFolder
+        language = try values.decodeIfPresent(AppLanguage.self, forKey: .language) ?? defaults.language
+    }
 }
 
 // MARK: - Speicher
@@ -68,7 +94,10 @@ final class SettingsStore: ObservableObject {
     static let shared = SettingsStore()
 
     @Published var settings: AppSettings {
-        didSet { scheduleSave() }
+        didSet {
+            Localization.use(settings.language)
+            scheduleSave()
+        }
     }
 
     private var saveWorkItem: DispatchWorkItem?
@@ -80,6 +109,7 @@ final class SettingsStore: ObservableObject {
         } else {
             settings = AppSettings()
         }
+        Localization.use(settings.language)
         ensureInboxExists()
     }
 

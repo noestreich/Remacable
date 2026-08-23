@@ -110,8 +110,8 @@ enum ProcessError: LocalizedError {
         case .launchFailed(let msg): return msg
         case .failed(_, _, let output):
             let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? "Aufruf fehlgeschlagen" : String(trimmed.prefix(400))
-        case .timedOut(let command): return "Zeitüberschreitung bei \(command)"
+            return trimmed.isEmpty ? tr("error.process.failed") : String(trimmed.prefix(400))
+        case .timedOut(let command): return tr("error.process.timeout", command)
         }
     }
 }

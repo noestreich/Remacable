@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         Task { @MainActor in
+            _ = SettingsStore.shared
             StatusItemController.shared.install()
             Coordinator.shared.start()
             // S2R_OPEN_MENU klappt das Menü beim Start auf — zum Nachschauen.
@@ -72,7 +73,7 @@ final class StatusItemController: NSObject {
         statusItem = item
 
         if let button = item.button {
-            button.toolTip = "Remacable — Dateien auf dieses Symbol ziehen"
+            button.toolTip = tr("menu.tooltip")
             // Der Knopf selbst reagiert auf Klicks …
             button.target = self
             button.action = #selector(handleClick)
@@ -128,6 +129,10 @@ final class StatusItemController: NSObject {
     }
 
     func closePopover() { popover?.performClose(nil) }
+
+    func refreshLocalizedText() {
+        statusItem?.button?.toolTip = tr("menu.tooltip")
+    }
 }
 
 /// Unsichtbare Ebene ueber dem Menueleisten-Knopf: sie faengt den Klick ab und
@@ -143,7 +148,7 @@ final class StatusDropView: NSView {
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("nicht unterstützt") }
+    required init?(coder: NSCoder) { fatalError("unsupported") }
 
     override func mouseDown(with event: NSEvent) {
         onClick?()
@@ -226,13 +231,13 @@ struct MenuView: View {
             if !RmapiClient.isInstalled || !coordinator.isPaired {
                 setupHint
             } else {
-                Toggle("Überwachung aktiv", isOn: Binding(
+                Toggle(tr("menu.watching.toggle"), isOn: Binding(
                     get: { settings.settings.watchingEnabled },
                     set: { coordinator.setWatching($0) }))
                 .toggleStyle(.switch)
                 .padding(.horizontal, 8)
 
-                Label("Dateien lassen sich direkt auf das Symbol in der Menüleiste ziehen.",
+                Label(tr("menu.drag_hint"),
                       systemImage: "arrow.up.doc")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -242,24 +247,24 @@ struct MenuView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 1) {
-                MenuRow(title: "Dateien auswählen …", systemImage: "doc.badge.plus",
+                MenuRow(title: tr("menu.choose_files"), systemImage: "doc.badge.plus",
                         enabled: coordinator.isPaired) { chooseFiles() }
-                MenuRow(title: "Jetzt prüfen", systemImage: "arrow.clockwise",
+                MenuRow(title: tr("menu.scan_now"), systemImage: "arrow.clockwise",
                         enabled: coordinator.isPaired && !engine.isBusy) {
                     StatusItemController.shared.closePopover()
-                    UploadEngine.shared.scanAll(reason: "manuell")
+                    UploadEngine.shared.scanAll(reason: tr("scan.reason.manual"))
                 }
-                MenuRow(title: "Watch-Ordner öffnen", systemImage: "folder") { openInbox() }
+                MenuRow(title: tr("menu.open_watch_folder"), systemImage: "folder") { openInbox() }
             }
 
             Divider()
 
             VStack(alignment: .leading, spacing: 1) {
-                MenuRow(title: "Einstellungen …", systemImage: "gearshape") {
+                MenuRow(title: tr("menu.settings"), systemImage: "gearshape") {
                     StatusItemController.shared.closePopover()
                     SettingsWindowController.shared.show()
                 }
-                MenuRow(title: "Beenden", systemImage: "power") { NSApp.terminate(nil) }
+                MenuRow(title: tr("menu.quit"), systemImage: "power") { NSApp.terminate(nil) }
             }
         }
         .padding(10)
@@ -272,7 +277,7 @@ struct MenuView: View {
                 Circle()
                     .fill(statusColor)
                     .frame(width: 8, height: 8)
-                Text(coordinator.isWatching ? "Überwachung läuft" : "Überwachung aus")
+                Text(coordinator.isWatching ? tr("menu.watching.on") : tr("menu.watching.off"))
                     .font(.headline)
                 if engine.isBusy { ProgressView().controlSize(.small) }
             }
@@ -292,9 +297,9 @@ struct MenuView: View {
 
     private var setupHint: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(RmapiClient.isInstalled ? "Konto noch nicht gekoppelt" : "Noch nicht eingerichtet")
+            Text(RmapiClient.isInstalled ? tr("menu.setup.unpaired") : tr("menu.setup.required"))
                 .font(.callout.weight(.medium))
-            Text("In den Einstellungen einrichten — das dauert eine Minute.")
+            Text(tr("menu.setup.hint"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -309,7 +314,7 @@ struct MenuView: View {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        panel.message = "Dateien ans reMarkable schicken"
+        panel.message = tr("dialog.choose_files.message")
         if panel.runModal() == .OK {
             UploadEngine.shared.send(files: panel.urls)
         }

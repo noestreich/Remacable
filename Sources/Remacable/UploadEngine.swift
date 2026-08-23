@@ -8,14 +8,40 @@ final class UploadEngine: ObservableObject {
     static let shared = UploadEngine()
 
     @Published private(set) var isBusy = false
-    @Published private(set) var status: String = "Bereit"
+    @Published private var activity = Activity.ready
     @Published private(set) var uploadedTotal = 0
     @Published private(set) var lastUpload: Date?
+
+    var status: String {
+        switch activity {
+        case .ready:
+            return tr("status.ready")
+        case .checking:
+            return tr("status.checking")
+        case .uploadingOne(let name):
+            return tr("status.uploading.one", name)
+        case .uploadingMany(let count):
+            return tr("status.uploading.many", count)
+        case .uploaded(let count):
+            return count == 1 ? tr("status.uploaded.one") : tr("status.uploaded.many", count)
+        case .failed(let message):
+            return message
+        }
+    }
 
     private let queue = DispatchQueue(label: "de.send2rm.upload")
     private var seen: [String: String] = [:]
 
     private init() { seen = Self.loadState() }
+
+    private enum Activity {
+        case ready
+        case checking
+        case uploadingOne(String)
+        case uploadingMany(Int)
+        case uploaded(Int)
+        case failed(String)
+    }
 
     // MARK: Oeffentliche Aufrufe
 
@@ -54,7 +80,7 @@ final class UploadEngine: ObservableObject {
         seen = seen.filter { !$0.key.hasPrefix(prefix) }
         Self.saveState(seen)
         if before != seen.count {
-            Log.shared.info("Merkzettel für \(source.displayName) geleert (\(before - seen.count) Einträge)")
+            Log.shared.info(tr("log.memo_cleared", source.displayName, before - seen.count))
         }
     }
 
@@ -70,7 +96,7 @@ final class UploadEngine: ObservableObject {
         let settings = SettingsStore.shared.settings
         guard RmapiClient.isInstalled else { return }
         let state = seen
-        setBusy(true, status: "Prüfe Ordner …")
+        setBusy(true, activity: .checking)
         queue.async { [weak self] in
             guard let self else { return }
             let (result, updated) = self.runScan(settings: settings, state: state, reason: reason)
@@ -83,9 +109,9 @@ final class UploadEngine: ObservableObject {
         guard !files.isEmpty else { return }
         let settings = SettingsStore.shared.settings
         let target = folder ?? settings.defaultTargetFolder
-        setBusy(true, status: files.count == 1
-                ? "Lade \(files[0].lastPathComponent) hoch …"
-                : "Lade \(files.count) Dateien hoch …")
+        setBusy(true, activity: files.count == 1
+                ? .uploadingOne(files[0].lastPathComponent)
+                : .uploadingMany(files.count))
         queue.async { [weak self] in
             guard let self else { return }
             var taken = TitleRegistry()
@@ -100,8 +126,9 @@ final class UploadEngine: ObservableObject {
                     result.failed += 1
                     result.lastError = error.localizedDescription
                     Log.shared.error("\(file.lastPathComponent): \(error.localizedDescription)")
-                    Notifier.send(title: "Remacable: Fehler",
-                                  body: "\(file.lastPathComponent): \(error.localizedDescription)")
+                    Notifier.send(title: tr("notification.error.title"),
+                                  body: tr("notification.error.body", file.lastPathComponent,
+                                           error.localizedDescription))
                 }
             }
             self.finish(result)
@@ -153,7 +180,10 @@ final class UploadEngine: ObservableObject {
                 cleanupArchive(source: source, settings: settings)
                 continue
             }
-            Log.shared.info("\(source.displayName): \(candidates.count) Datei(en) — \(reason)")
+            Log.shared.info(candidates.count == 1
+                            ? tr("log.scan_candidates.one", source.displayName, reason)
+                            : tr("log.scan_candidates.many", source.displayName,
+                                 candidates.count, reason))
 
             for file in candidates {
                 let relativeDir = self.relativeDir(of: file, in: source)
@@ -175,8 +205,9 @@ final class UploadEngine: ObservableObject {
                 } catch {
                     result.failed += 1
                     result.lastError = error.localizedDescription
-                    Notifier.send(title: "Remacable: Fehler",
-                                  body: "\(file.lastPathComponent): \(error.localizedDescription)")
+                    Notifier.send(title: tr("notification.error.title"),
+                                  body: tr("notification.error.body", file.lastPathComponent,
+                                           error.localizedDescription))
                     if source.move {
                         Log.shared.error("\(file.lastPathComponent): \(error.localizedDescription)")
                         archive(file, source: source, subdir: "Failed", relativeDir: relativeDir)
@@ -185,7 +216,8 @@ final class UploadEngine: ObservableObject {
                         // fuenf Minuten erneut — einmal merken, dann Ruhe.
                         state[file.path] = mark
                         Self.saveState(state)
-                        Log.shared.error("\(file.lastPathComponent): \(error.localizedDescription) — wird nicht erneut versucht")
+                        Log.shared.error(tr("log.permanent_failure", file.lastPathComponent,
+                                            error.localizedDescription))
                     } else {
                         Log.shared.error("\(file.lastPathComponent): \(error.localizedDescription)")
                     }
@@ -239,7 +271,7 @@ final class UploadEngine: ObservableObject {
         let root = source.url
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: root.path, isDirectory: &isDir), isDir.boolValue else {
-            Log.shared.error("Ordner fehlt: \(root.path)")
+            Log.shared.error(tr("log.folder_missing", root.path))
             return []
         }
         if source.move {
@@ -332,7 +364,8 @@ final class UploadEngine: ObservableObject {
         do {
             try FileManager.default.moveItem(at: file, to: destination)
         } catch {
-            Log.shared.error("Konnte \(file.lastPathComponent) nicht ablegen: \(error.localizedDescription)")
+            Log.shared.error(tr("log.archive_failed", file.lastPathComponent,
+                                error.localizedDescription))
         }
     }
 
@@ -350,9 +383,9 @@ final class UploadEngine: ObservableObject {
                   modified < cutoff else { continue }
             do {
                 try FileManager.default.removeItem(at: url)
-                Log.shared.info("Archiv aufgeräumt: \(url.lastPathComponent)")
+                Log.shared.info(tr("log.archive_cleaned", url.lastPathComponent))
             } catch {
-                Log.shared.error("Konnte \(url.lastPathComponent) nicht löschen")
+                Log.shared.error(tr("log.delete_failed", url.lastPathComponent))
             }
         }
     }
@@ -409,9 +442,9 @@ final class UploadEngine: ObservableObject {
 
     // MARK: Status
 
-    private func setBusy(_ busy: Bool, status: String) {
+    private func setBusy(_ busy: Bool, activity: Activity) {
         isBusy = busy
-        self.status = status
+        self.activity = activity
     }
 
     private nonisolated func finish(_ result: Result, state: [String: String]? = nil) {
@@ -422,15 +455,17 @@ final class UploadEngine: ObservableObject {
             self.uploadedTotal += result.uploaded
             if result.uploaded > 0 {
                 self.lastUpload = Date()
-                let noun = result.uploaded == 1 ? "Dokument" : "Dokumente"
-                self.status = "\(result.uploaded) \(noun) hochgeladen"
+                self.activity = .uploaded(result.uploaded)
                 if SettingsStore.shared.settings.notify {
-                    Notifier.send(title: "Remacable", body: "\(result.uploaded) \(noun) hochgeladen")
+                    let body = result.uploaded == 1
+                        ? tr("notification.uploaded.one")
+                        : tr("notification.uploaded.many", result.uploaded)
+                    Notifier.send(title: "Remacable", body: body)
                 }
             } else if result.failed > 0 {
-                self.status = result.lastError ?? "Fehlgeschlagen"
+                self.activity = .failed(result.lastError ?? tr("status.failed"))
             } else {
-                self.status = "Bereit"
+                self.activity = .ready
             }
         }
     }
@@ -442,7 +477,7 @@ enum EngineError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .tooLarge(let sizeMB, let limit):
-            return String(format: "Datei ist %.0f MB (Limit %.0f MB)", sizeMB, limit)
+            return tr("error.file_too_large", sizeMB, limit)
         }
     }
 }
