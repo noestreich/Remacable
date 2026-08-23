@@ -4,7 +4,7 @@ import Combine
 import UniformTypeIdentifiers
 
 @main
-struct SendToReMarkableApp: App {
+struct RemacableApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 
     var body: some Scene {
@@ -57,7 +57,7 @@ final class StatusItemController: NSObject {
               let image = NSImage(contentsOf: url), image.size.height > 0 else {
             // Notnagel, falls die Ressource fehlt
             let fallback = NSImage(systemSymbolName: "paperplane",
-                                   accessibilityDescription: "Send to reMarkable")
+                                   accessibilityDescription: "Remacable")
             fallback?.isTemplate = true
             return fallback
         }
@@ -72,7 +72,7 @@ final class StatusItemController: NSObject {
         statusItem = item
 
         if let button = item.button {
-            button.toolTip = "Send to reMarkable — Dateien auf dieses Symbol ziehen"
+            button.toolTip = "Remacable — Dateien auf dieses Symbol ziehen"
             // Der Knopf selbst reagiert auf Klicks …
             button.target = self
             button.action = #selector(handleClick)
@@ -191,7 +191,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
                     .environmentObject(Coordinator.shared)
                     .environmentObject(UploadEngine.shared))
             let created = NSWindow(contentViewController: hosting)
-            created.title = "Send to reMarkable"
+            created.title = "Remacable"
             created.styleMask = [.titled, .closable, .miniaturizable, .resizable]
             created.setContentSize(NSSize(width: 640, height: 540))
             created.contentMinSize = NSSize(width: 520, height: 400)

@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "SendToReMarkable",
+    name: "Remacable",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(
-            name: "SendToReMarkable",
-            path: "Sources/SendToReMarkable",
+            name: "Remacable",
+            path: "Sources/Remacable",
             swiftSettings: [.swiftLanguageMode(.v5)]
         )
     ]

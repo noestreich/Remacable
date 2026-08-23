@@ -100,7 +100,7 @@ final class UploadEngine: ObservableObject {
                     result.failed += 1
                     result.lastError = error.localizedDescription
                     Log.shared.error("\(file.lastPathComponent): \(error.localizedDescription)")
-                    Notifier.send(title: "reMarkable: Fehler",
+                    Notifier.send(title: "Remacable: Fehler",
                                   body: "\(file.lastPathComponent): \(error.localizedDescription)")
                 }
             }
@@ -175,7 +175,7 @@ final class UploadEngine: ObservableObject {
                 } catch {
                     result.failed += 1
                     result.lastError = error.localizedDescription
-                    Notifier.send(title: "reMarkable: Fehler",
+                    Notifier.send(title: "Remacable: Fehler",
                                   body: "\(file.lastPathComponent): \(error.localizedDescription)")
                     if source.move {
                         Log.shared.error("\(file.lastPathComponent): \(error.localizedDescription)")
@@ -425,7 +425,7 @@ final class UploadEngine: ObservableObject {
                 let noun = result.uploaded == 1 ? "Dokument" : "Dokumente"
                 self.status = "\(result.uploaded) \(noun) hochgeladen"
                 if SettingsStore.shared.settings.notify {
-                    Notifier.send(title: "reMarkable", body: "\(result.uploaded) \(noun) hochgeladen")
+                    Notifier.send(title: "Remacable", body: "\(result.uploaded) \(noun) hochgeladen")
                 }
             } else if result.failed > 0 {
                 self.status = result.lastError ?? "Fehlgeschlagen"

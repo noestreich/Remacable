@@ -4,9 +4,16 @@ import Foundation
 
 enum Paths {
     static let appSupport: URL = {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("SendToReMarkable", isDirectory: true)
-        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        let manager = FileManager.default
+        let library = manager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let base = library.appendingPathComponent("Remacable", isDirectory: true)
+        // Die App hiess frueher SendToReMarkable — Einstellungen, Merkzettel und
+        // das rmapi-Binary wandern beim ersten Start mit um.
+        let legacy = library.appendingPathComponent("SendToReMarkable", isDirectory: true)
+        if !manager.fileExists(atPath: base.path), manager.fileExists(atPath: legacy.path) {
+            try? manager.moveItem(at: legacy, to: base)
+        }
+        try? manager.createDirectory(at: base, withIntermediateDirectories: true)
         return base
     }()
 
@@ -22,7 +29,7 @@ enum Paths {
     static var logFile: URL {
         let dir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Logs", isDirectory: true)
-        return dir.appendingPathComponent("SendToReMarkable.log")
+        return dir.appendingPathComponent("Remacable.log")
     }
 
     static var defaultInbox: URL {

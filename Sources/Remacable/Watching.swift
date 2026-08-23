@@ -117,6 +117,11 @@ final class Coordinator: ObservableObject {
 
     func start() {
         refreshStatus()
+        // Nach einem Umbenennen oder Verschieben zeigt die alte Registrierung
+        // ins Leere — dann stillschweigend neu eintragen.
+        if SettingsStore.shared.settings.launchAtLogin, !LoginItem.isEnabled {
+            try? LoginItem.set(true)
+        }
         SettingsStore.shared.saveNow()  // beim ersten Start die Voreinstellungen festschreiben
         applySettings()
         // Netz gegen verlorene Ereignisse, analog zum StartInterval des Agents

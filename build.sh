@@ -1,10 +1,10 @@
 #!/bin/bash
-# Baut SendToReMarkable.app aus dem SwiftPM-Paket.
+# Baut Remacable.app aus dem SwiftPM-Paket.
 set -euo pipefail
 
 cd "$(dirname "$0")"
-APP="SendToReMarkable.app"
-BUNDLE_ID="de.oestreich.SendToReMarkable"
+APP="Remacable.app"
+BUNDLE_ID="de.oestreich.Remacable"
 VERSION="1.0"
 
 echo "==> Kompilieren (release)"
@@ -13,7 +13,7 @@ swift build -c release
 echo "==> Bundle zusammenbauen"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp ".build/release/SendToReMarkable" "$APP/Contents/MacOS/SendToReMarkable"
+cp ".build/release/Remacable" "$APP/Contents/MacOS/Remacable"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp Resources/MenuBarIcon.png "$APP/Contents/Resources/MenuBarIcon.png"
 
@@ -22,10 +22,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>SendToReMarkable</string>
-  <key>CFBundleDisplayName</key><string>Send to reMarkable</string>
+  <key>CFBundleName</key><string>Remacable</string>
+  <key>CFBundleDisplayName</key><string>Remacable</string>
   <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
-  <key>CFBundleExecutable</key><string>SendToReMarkable</string>
+  <key>CFBundleExecutable</key><string>Remacable</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>

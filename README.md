@@ -136,11 +136,10 @@ schicken — alles andere geht weiter.
 Braucht Xcode oder die Command Line Tools:
 
 ```bash
-cd SendToReMarkable
 ./build.sh
 ```
 
-Erzeugt `SendToReMarkable.app`. Liegt ein „Developer ID Application"-Zertifikat
+Erzeugt `Remacable.app`. Liegt ein „Developer ID Application"-Zertifikat
 im Schlüsselbund, wird damit signiert — mit Hardened Runtime und sicherem
 Zeitstempel —, sonst ad-hoc.
 
@@ -149,9 +148,9 @@ Zugangsdaten legt man einmalig im Schlüsselbund ab:
 
 ```bash
 xcrun notarytool store-credentials "Remacable" --apple-id "DEINE-APPLE-ID" --team-id DEINE-TEAM-ID
-ditto -c -k --keepParent --sequesterRsrc SendToReMarkable.app Remacable.zip
+ditto -c -k --keepParent --sequesterRsrc Remacable.app Remacable.zip
 xcrun notarytool submit Remacable.zip --keychain-profile "Remacable" --wait
-xcrun stapler staple SendToReMarkable.app   # danach neu paketieren
+xcrun stapler staple Remacable.app   # danach neu paketieren
 ```
 
 Das Symbol für die Menüleiste entsteht aus einer einfarbigen Vorlage — das
@@ -161,6 +160,21 @@ Werkzeug schneidet den Rand weg und skaliert auf Höhe:
 swift Tools/make-menubar-icon.swift vorlage.png Resources/MenuBarIcon.png 44
 ```
 
-Aufbau des Codes: `Sources/SendToReMarkable/` — `UploadEngine` sammelt ein,
+Aufbau des Codes: `Sources/Remacable/` — `UploadEngine` sammelt ein,
 konvertiert und lädt hoch, `Watching` hängt an FSEvents, `RmapiClient` spricht
 mit der Cloud, der Rest ist Oberfläche.
+
+## Dank
+
+Das Herzstück ist nicht von mir: **[ddvk/rmapi](https://github.com/ddvk/rmapi)**
+spricht die reMarkable-Cloud-API und erledigt den eigentlichen Upload. Ohne
+dieses Projekt gäbe es Remacable nicht — es lädt rmapi bei der Einrichtung
+herunter, hält es aktuell und baut eine Oberfläche drumherum.
+
+rmapi geht zurück auf [juruen/rmapi](https://github.com/juruen/rmapi); die
+Fassung von ddvk pflegt das neuere Sync-Protokoll weiter. Beide stehen unter
+der AGPL-3.0 und werden von Remacable unverändert als eigenständiges Programm
+aufgerufen, nicht eingebunden.
+
+reMarkable selbst ist an alldem unbeteiligt: Die verwendete Schnittstelle ist
+nicht offiziell dokumentiert.
