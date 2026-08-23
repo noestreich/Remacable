@@ -121,10 +121,9 @@ final class UploadEngine: ObservableObject {
     private struct TitleRegistry {
         private var byFolder: [String: Set<String>] = [:]
 
-        mutating func unique(_ wanted: String, in folder: String) -> String {
+        mutating func unique(_ wanted: String, in folder: String) throws -> String {
             if byFolder[folder] == nil {
-                RmapiClient.ensureFolder(folder)
-                byFolder[folder] = RmapiClient.entries(in: folder)
+                byFolder[folder] = try RmapiClient.entries(in: folder)
             }
             var candidate = wanted
             var counter = 2
@@ -219,7 +218,7 @@ final class UploadEngine: ObservableObject {
 
         let base = forcedTitle ?? Self.applyRename(file.deletingPathExtension().lastPathComponent,
                                                    rules: rename)
-        let title = taken.unique(base, in: folder)
+        let title = try taken.unique(base, in: folder)
 
         // Der Dateiname wird zum Titel auf dem Geraet
         let staged = workDir.appendingPathComponent("\(title).\(payload.pathExtension)")
