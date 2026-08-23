@@ -33,7 +33,9 @@ registriert Anmeldeobjekte sonst je nach Ablageort nicht zuverlässig.
 
 ## Was die App kann
 
-**Menüleiste** — Status auf einen Blick, Überwachung an/aus, „Jetzt prüfen",
+**Menüleiste** — der Vogel als Template-Symbol: macOS färbt ihn passend zur
+Menüleiste ein, hell auf dunkel und umgekehrt. Ist die Überwachung aus, wird er
+blass dargestellt. Dazu Status auf einen Blick, Überwachung an/aus, „Jetzt prüfen",
 Watch-Ordner im Finder öffnen. **Dateien lassen sich direkt auf das Symbol in
 der Menüleiste ziehen** — das Symbol hebt sich hervor, sobald etwas darüber
 schwebt. (Ein Drop-Bereich *im* aufgeklappten Menü wäre nutzlos: das Panel
@@ -113,6 +115,11 @@ reMarkable kann nur PDF und EPUB — alles andere wird vorher konvertiert:
 ## Aufbau
 
 ```
+Resources/
+    AppIcon.icns         App-Icon (Finder, Anmeldeobjekte)
+    MenuBarIcon.png      Menüleisten-Symbol, freigestellt und auf Höhe gebracht
+Tools/
+    make-menubar-icon.swift   erzeugt MenuBarIcon.png aus einer Vorlage
 Sources/SendToReMarkable/
     Support.swift        Pfade, Log, Prozessaufrufe, Benachrichtigungen
     Settings.swift       Modell und Speicherung
@@ -128,6 +135,17 @@ Sources/SendToReMarkable/
 Uploads laufen auf einer seriellen Queue — nie zwei gleichzeitig. FSEvents
 meldet Änderungen gebündelt (1,5 s), zusätzlich prüft ein Zeitgeber alle fünf
 Minuten nach, falls ein Ereignis verlorengeht.
+
+## Symbole austauschen
+
+`Resources/AppIcon.icns` ersetzen — `build.sh` legt es ins Bundle und trägt es
+in die Info.plist ein. Für die Menüleiste eine einfarbige Vorlage durch das
+Werkzeug schicken; es schneidet den Rand weg, skaliert auf Höhe und übersetzt
+Schwarz in Deckkraft:
+
+```bash
+swift Tools/make-menubar-icon.swift vorlage.png Resources/MenuBarIcon.png 44
+```
 
 ## Debug-Schalter
 

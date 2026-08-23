@@ -50,6 +50,23 @@ final class StatusItemController: NSObject {
     private var popover: NSPopover?
     private var subscription: AnyCancellable?
 
+    /// Eigenes Symbol als Template: macOS faerbt es passend zur Menueleiste ein,
+    /// hell auf dunkel und umgekehrt.
+    private lazy var icon: NSImage? = {
+        guard let url = Bundle.main.url(forResource: "MenuBarIcon", withExtension: "png"),
+              let image = NSImage(contentsOf: url), image.size.height > 0 else {
+            // Notnagel, falls die Ressource fehlt
+            let fallback = NSImage(systemSymbolName: "paperplane",
+                                   accessibilityDescription: "Send to reMarkable")
+            fallback?.isTemplate = true
+            return fallback
+        }
+        let height: CGFloat = 16
+        image.size = NSSize(width: (image.size.width / image.size.height) * height, height: height)
+        image.isTemplate = true
+        return image
+    }()
+
     func install() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem = item
@@ -80,10 +97,9 @@ final class StatusItemController: NSObject {
     }
 
     private func updateIcon(watching: Bool) {
-        let name = watching ? "paperplane.fill" : "paperplane"
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: "Send to reMarkable")
-        image?.isTemplate = true
-        statusItem?.button?.image = image
+        statusItem?.button?.image = icon
+        // Abgeschaltete Ueberwachung: blasses Symbol, wie bei Systemobjekten
+        statusItem?.button?.appearsDisabled = !watching
     }
 
     func togglePopover() {

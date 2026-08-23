@@ -14,6 +14,8 @@ echo "==> Bundle zusammenbauen"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp ".build/release/SendToReMarkable" "$APP/Contents/MacOS/SendToReMarkable"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+cp Resources/MenuBarIcon.png "$APP/Contents/Resources/MenuBarIcon.png"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -25,6 +27,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
   <key>CFBundleExecutable</key><string>SendToReMarkable</string>
   <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
   <key>CFBundleVersion</key><string>$VERSION</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
@@ -38,6 +41,9 @@ PLIST
 # Ad-hoc signieren, sonst beschwert sich macOS beim Start
 codesign --force --sign - --timestamp=none "$APP" >/dev/null 2>&1 || \
   echo "    (Signieren übersprungen)"
+
+# Damit der Finder das neue Icon nicht aus dem Zwischenspeicher zeigt
+touch "$APP"
 
 echo "==> Fertig: $(pwd)/$APP"
 echo
