@@ -71,9 +71,14 @@ enum RmapiClient {
         for part in parts {
             path += "/" + part
 
-            if let existing = try? command(["ls", path], 120) {
-                listing = existing
+            do {
+                try requireDirectory(at: path, command: command)
+                listing = try command(["ls", path], 120)
                 continue
+            } catch let error as RmapiError {
+                throw error
+            } catch {
+                guard isMissingEntry(error) else { throw error }
             }
 
             var lastError: Error?
@@ -86,9 +91,12 @@ enum RmapiClient {
             var visible = false
             for attempt in 0..<4 {
                 do {
+                    try requireDirectory(at: path, command: command)
                     listing = try command(["ls", path], 120)
                     visible = true
                     break
+                } catch let error as RmapiError {
+                    throw error
                 } catch {
                     lastError = error
                     if attempt < 3 { wait(0.25 * pow(2, Double(attempt))) }
@@ -97,6 +105,16 @@ enum RmapiClient {
             if !visible, let lastError { throw lastError }
         }
         return listing
+    }
+
+    static func requireDirectory(at path: String, command: CommandRunner) throws {
+        let output = try command(["stat", path], 120)
+        guard let data = output.data(using: .utf8),
+              let metadata = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let type = metadata["Type"] as? String else {
+            throw RmapiError.invalidMetadata(path)
+        }
+        guard type == "CollectionType" else { throw RmapiError.destinationIsDocument(path) }
     }
 
     /// Namen im Zielordner — damit lassen sich Kollisionen abfangen, bevor
@@ -138,6 +156,12 @@ enum RmapiClient {
         let message = error.localizedDescription.lowercased()
         return message.contains("directory doesn't exist")
             || message.contains("directory does not exist")
+    }
+
+    static func isMissingEntry(_ error: Error) -> Bool {
+        let message = error.localizedDescription.lowercased()
+        return message.contains("file doesn't exist")
+            || message.contains("file does not exist")
     }
 
     // MARK: Versionen
@@ -243,6 +267,8 @@ enum RmapiError: LocalizedError {
     case notInstalled
     case notPaired
     case invalidCode
+    case destinationIsDocument(String)
+    case invalidMetadata(String)
     case download(String)
 
     var errorDescription: String? {
@@ -250,6 +276,10 @@ enum RmapiError: LocalizedError {
         case .notInstalled: return "rmapi ist noch nicht installiert."
         case .notPaired: return "Das Konto ist noch nicht gekoppelt."
         case .invalidCode: return "Bitte den 8-stelligen Code eingeben."
+        case .destinationIsDocument(let path):
+            return "Der Zielpfad \(path) ist ein Dokument, kein Ordner. Bitte wähle einen anderen Zielordner."
+        case .invalidMetadata(let path):
+            return "Die Cloud-Metadaten für \(path) konnten nicht gelesen werden."
         case .download(let message): return message
         }
     }
