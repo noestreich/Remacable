@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 // MARK: - Modell
@@ -48,6 +49,22 @@ struct WatchSource: Codable, Identifiable, Hashable {
     }
 }
 
+/// Sprache der Oberflaeche. „System“ folgt der Systemeinstellung.
+enum AppLanguage: String, Codable, CaseIterable, Identifiable {
+    case system, english, german
+
+    var id: String { rawValue }
+
+    /// Sprachcode fuer AppleLanguages — nil heisst: nicht eingreifen.
+    var code: String? {
+        switch self {
+        case .system: return nil
+        case .english: return "en"
+        case .german: return "de"
+        }
+    }
+}
+
 struct AppSettings: Codable {
     var sources: [WatchSource] = [.inbox()]
     var watchingEnabled: Bool = true
@@ -59,6 +76,50 @@ struct AppSettings: Codable {
     var sofficePath: String = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
     var ebookConvertPath: String = "/Applications/calibre.app/Contents/MacOS/ebook-convert"
     var defaultTargetFolder: String = "/Inbox"
+    var language: AppLanguage = .system
+
+    init() {}
+
+    /// Von Hand geschrieben, damit eine aeltere settings.json ohne die neueren
+    /// Felder weiter geladen wird. Der erzeugte Decoder wuerde bei einem
+    /// fehlenden Schluessel werfen — und die eingerichteten Ordner waeren weg.
+    /// Nach einem Vorschlag von jimmystridh (PR #1).
+    init(from decoder: Decoder) throws {
+        let fallback = AppSettings()
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        sources = try values.decodeIfPresent([WatchSource].self, forKey: .sources) ?? fallback.sources
+        watchingEnabled = try values.decodeIfPresent(Bool.self, forKey: .watchingEnabled) ?? fallback.watchingEnabled
+        keepUploaded = try values.decodeIfPresent(Bool.self, forKey: .keepUploaded) ?? fallback.keepUploaded
+        cleanupUploadedDays = try values.decodeIfPresent(Double.self, forKey: .cleanupUploadedDays) ?? fallback.cleanupUploadedDays
+        notify = try values.decodeIfPresent(Bool.self, forKey: .notify) ?? fallback.notify
+        maxMB = try values.decodeIfPresent(Double.self, forKey: .maxMB) ?? fallback.maxMB
+        launchAtLogin = try values.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? fallback.launchAtLogin
+        sofficePath = try values.decodeIfPresent(String.self, forKey: .sofficePath) ?? fallback.sofficePath
+        ebookConvertPath = try values.decodeIfPresent(String.self, forKey: .ebookConvertPath) ?? fallback.ebookConvertPath
+        defaultTargetFolder = try values.decodeIfPresent(String.self, forKey: .defaultTargetFolder) ?? fallback.defaultTargetFolder
+        language = try values.decodeIfPresent(AppLanguage.self, forKey: .language) ?? fallback.language
+    }
+}
+
+/// Setzt die Sprache fuer den naechsten Start. macOS liest AppleLanguages beim
+/// Programmstart, ein Wechsel wirkt daher erst nach einem Neustart der App.
+enum LanguageOverride {
+    static func apply(_ language: AppLanguage) {
+        if let code = language.code {
+            UserDefaults.standard.set([code], forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        }
+    }
+
+    static func restartApp() {
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL,
+                                           configuration: configuration) { _, _ in
+            DispatchQueue.main.async { NSApp.terminate(nil) }
+        }
+    }
 }
 
 // MARK: - Speicher

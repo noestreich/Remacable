@@ -53,6 +53,12 @@
 "Size limit" = "Größenlimit";
 "%lld MB per file" = "%lld MB pro Datei";
 "Default destination folder" = "Standard-Zielordner";
+"Language" = "Sprache";
+"System default" = "Systemsprache";
+"Restart to switch the language" = "Für den Sprachwechsel neu starten";
+"Remacable reads the language at launch. Restart now?" = "Remacable liest die Sprache beim Start. Jetzt neu starten?";
+"Restart now" = "Jetzt neu starten";
+"Later" = "Später";
 "Could not set the login item: %@" = "Anmeldeobjekt ließ sich nicht setzen: %@";
 
 /* Konverter */

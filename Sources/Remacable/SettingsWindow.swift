@@ -105,6 +105,17 @@ struct GeneralTab: View {
                         Text(String(format: String(localized: "%lld MB per file"), Int(store.settings.maxMB)))
                     }
                 }
+                LabeledContent("Language") {
+                    Picker("", selection: Binding(
+                        get: { store.settings.language },
+                        set: { chooseLanguage($0) })) {
+                            Text("System default").tag(AppLanguage.system)
+                            Text(verbatim: "English").tag(AppLanguage.english)
+                            Text(verbatim: "Deutsch").tag(AppLanguage.german)
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                }
                 LabeledContent("Default destination folder") {
                     TextField("", text: $store.settings.defaultTargetFolder, prompt: Text("/Inbox"))
                         .textFieldStyle(.roundedBorder)
@@ -183,6 +194,24 @@ struct GeneralTab: View {
                     errorMessage = error.localizedDescription
                 }
             }
+        }
+    }
+
+    /// Die Sprache greift erst beim naechsten Start — deshalb gleich anbieten,
+    /// die App neu zu starten.
+    private func chooseLanguage(_ language: AppLanguage) {
+        guard language != store.settings.language else { return }
+        store.settings.language = language
+        store.saveNow()
+        LanguageOverride.apply(language)
+
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Restart to switch the language")
+        alert.informativeText = String(localized: "Remacable reads the language at launch. Restart now?")
+        alert.addButton(withTitle: String(localized: "Restart now"))
+        alert.addButton(withTitle: String(localized: "Later"))
+        if alert.runModal() == .alertFirstButtonReturn {
+            LanguageOverride.restartApp()
         }
     }
 
