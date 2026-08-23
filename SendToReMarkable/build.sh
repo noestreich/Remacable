@@ -38,9 +38,21 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# Ad-hoc signieren, sonst beschwert sich macOS beim Start
-codesign --force --sign - --timestamp=none "$APP" >/dev/null 2>&1 || \
-  echo "    (Signieren übersprungen)"
+# Mit Developer ID signieren, wenn eine im Schluesselbund liegt — nur so laesst
+# sich die App spaeter beurkunden (notarisieren). Sonst ad-hoc, dann muss man
+# sie beim ersten Start ueber die Systemeinstellungen freigeben.
+IDENTITY="${SIGN_IDENTITY:-$(security find-identity -v -p codesigning 2>/dev/null \
+  | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)"$/\1/')}"
+
+if [ -n "$IDENTITY" ]; then
+  echo "==> Signieren: $IDENTITY"
+  codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP"
+  codesign --verify --strict "$APP" && echo "    Signatur geprüft"
+else
+  echo "==> Signieren: ad-hoc (kein Developer-ID-Zertifikat gefunden)"
+  codesign --force --sign - --timestamp=none "$APP" >/dev/null 2>&1 || \
+    echo "    (Signieren übersprungen)"
+fi
 
 # Damit der Finder das neue Icon nicht aus dem Zwischenspeicher zeigt
 touch "$APP"
