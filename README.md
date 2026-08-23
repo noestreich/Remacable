@@ -32,7 +32,8 @@ Server.
 
 **1. App holen.** Die fertige App aus den
 [Releases](https://github.com/noestreich/Remacable/releases) laden, entpacken
-und nach *Programme* ziehen. (Oder selbst bauen, siehe ganz unten.)
+und nach *Programme* ziehen. Sie ist signiert und von Apple beurkundet, startet
+also ohne Warnmeldung. (Oder selbst bauen, siehe ganz unten.)
 
 **2. Hilfsprogramm installieren.** Beim ersten Start öffnet sich das
 Einstellungsfenster. Unter **Allgemein → rmapi → Installieren** holt sich die
@@ -140,7 +141,18 @@ cd SendToReMarkable
 ```
 
 Erzeugt `SendToReMarkable.app`. Liegt ein „Developer ID Application"-Zertifikat
-im Schlüsselbund, wird damit signiert, sonst ad-hoc.
+im Schlüsselbund, wird damit signiert — mit Hardened Runtime und sicherem
+Zeitstempel —, sonst ad-hoc.
+
+Für eine Veröffentlichung kommt die Beurkundung durch Apple dazu. Die
+Zugangsdaten legt man einmalig im Schlüsselbund ab:
+
+```bash
+xcrun notarytool store-credentials "Remacable" --apple-id "DEINE-APPLE-ID" --team-id DEINE-TEAM-ID
+ditto -c -k --keepParent --sequesterRsrc SendToReMarkable.app Remacable.zip
+xcrun notarytool submit Remacable.zip --keychain-profile "Remacable" --wait
+xcrun stapler staple SendToReMarkable.app   # danach neu paketieren
+```
 
 Das Symbol für die Menüleiste entsteht aus einer einfarbigen Vorlage — das
 Werkzeug schneidet den Rand weg und skaliert auf Höhe:
