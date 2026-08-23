@@ -209,6 +209,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         Coordinator.shared.settingsDidClose()
+        window = nil
     }
 }
 
