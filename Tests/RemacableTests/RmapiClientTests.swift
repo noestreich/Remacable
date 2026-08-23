@@ -68,7 +68,10 @@ final class RmapiClientTests: XCTestCase {
                 return #"{"Type":"DocumentType"}"#
             },
             wait: { _ in })) { error in
-                XCTAssertTrue(error.localizedDescription.contains("ist ein Dokument"))
+                guard case RmapiError.destinationIsDocument(let path) = error else {
+                    return XCTFail("Unexpected error: \(error)")
+                }
+                XCTAssertEqual(path, "/Inbox")
             }
 
         XCTAssertEqual(commands, [["stat", "/Inbox"]])
