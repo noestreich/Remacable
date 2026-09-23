@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 APP="Remacable.app"
 BUNDLE_ID="de.oestreich.Remacable"
-VERSION="1.1"
+VERSION="1.2"
 
 echo "==> Kompilieren (release)"
 swift build -c release
