@@ -13,9 +13,13 @@ final class UploadEngine: ObservableObject {
     @Published private(set) var lastUpload: Date?
 
     private let queue = DispatchQueue(label: "de.send2rm.upload")
-    private var seen: [String: String] = [:]
+    /// Gemeinsamer Merkzettel statt einer Kopie je Durchlauf — siehe SeenStore.
+    private nonisolated let seen = SeenStore()
+    /// Laeuft gerade ein Durchlauf, wird ein weiterer nur vorgemerkt.
+    private var scanRunning = false
+    private var pendingReason: String?
 
-    private init() { seen = Self.loadState() }
+    private init() {}
 
     // MARK: Oeffentliche Aufrufe
 
@@ -31,51 +35,62 @@ final class UploadEngine: ObservableObject {
     /// Einschalten einer Quelle.
     func matchingFiles(in source: WatchSource) -> [URL] {
         var stats = ScanStats()
-        return collect(from: source, state: seen, stats: &stats)
+        return collect(from: source, state: seen.snapshot(), stats: &stats)
     }
 
     /// Dasselbe mit Begruendung, wenn nichts uebrig bleibt.
     func preview(for source: WatchSource) -> (files: [URL], stats: ScanStats) {
         var stats = ScanStats()
-        let files = collect(from: source, state: seen, stats: &stats)
+        let files = collect(from: source, state: seen.snapshot(), stats: &stats)
         return (files, stats)
     }
 
     /// Wie viele Dateien dieses Ordners im Merkzettel stehen.
     func knownCount(for source: WatchSource) -> Int {
-        let prefix = source.url.path + "/"
-        return seen.keys.filter { $0.hasPrefix(prefix) }.count
+        seen.count(withPrefix: source.url.path + "/")
     }
 
     /// Merkzettel fuer einen Ordner leeren — danach geht alles erneut hoch.
     func forget(source: WatchSource) {
-        let prefix = source.url.path + "/"
-        let before = seen.count
-        seen = seen.filter { !$0.key.hasPrefix(prefix) }
-        Self.saveState(seen)
-        if before != seen.count {
+        let removed = seen.forget(withPrefix: source.url.path + "/")
+        if removed > 0 {
             Log.shared.info(String(format: String(localized: "Cleared upload memory for %@ (%lld entries)"),
-                                   source.displayName, before - seen.count))
+                                   source.displayName, removed))
         }
     }
 
     /// Vorhandene Dateien als „schon erledigt" abhaken, ohne sie hochzuladen.
     func markAsSeen(_ files: [URL]) {
-        for file in files {
-            if let mark = Self.fingerprint(file) { seen[file.path] = mark }
-        }
-        Self.saveState(seen)
+        seen.mark(files)
     }
 
     func scanAll(reason: String) {
-        let settings = SettingsStore.shared.settings
         guard RmapiClient.isInstalled else { return }
-        let state = seen
+        // Laeuft schon einer, wird nur vorgemerkt. Sonst reihen sich waehrend
+        // eines langen Durchlaufs beliebig viele weitere ein — und jeder von
+        // ihnen wuerde dieselben Dateien noch einmal hochladen.
+        guard !scanRunning else {
+            pendingReason = reason
+            return
+        }
+        start(reason: reason)
+    }
+
+    private func start(reason: String) {
+        let settings = SettingsStore.shared.settings
+        scanRunning = true
         setBusy(true, status: String(localized: "Checking folders…"))
         queue.async { [weak self] in
             guard let self else { return }
-            let (result, updated) = self.runScan(settings: settings, state: state, reason: reason)
-            self.finish(result, state: updated)
+            let result = self.runScan(settings: settings, reason: reason)
+            Task { @MainActor in
+                self.scanRunning = false
+                self.finish(result)
+                if let pending = self.pendingReason {
+                    self.pendingReason = nil
+                    self.start(reason: pending)
+                }
+            }
         }
     }
 
@@ -138,17 +153,19 @@ final class UploadEngine: ObservableObject {
         }
     }
 
-    private nonisolated func runScan(settings: AppSettings, state initialState: [String: String],
-                                     reason: String) -> (Result, [String: String]) {
+    private nonisolated func runScan(settings: AppSettings, reason: String) -> Result {
         var result = Result()
         var taken = TitleRegistry()
-        var state = initialState
+        // Erst hier lesen, nicht beim Einreihen: zwischen beidem koennen
+        // Minuten liegen, in denen ein anderer Durchlauf schon hochgeladen hat.
+        var state = seen.snapshot()
 
         for source in settings.sources where source.enabled {
-            // Erst jetzt warten: nur fuer Dateien, die wirklich in Frage kommen
+            // Erst jetzt warten: nur fuer Dateien, die wirklich in Frage kommen,
+            // und fuer alle gemeinsam statt nacheinander.
             var stats = ScanStats()
-            let candidates = collect(from: source, state: state, stats: &stats)
-                .filter { isStable($0, wait: source.stableWait) }
+            let candidates = settled(collect(from: source, state: state, stats: &stats),
+                                     wait: source.stableWait)
             guard !candidates.isEmpty else {
                 cleanupArchive(source: source, settings: settings)
                 continue
@@ -169,9 +186,11 @@ final class UploadEngine: ObservableObject {
                         } else {
                             try? FileManager.default.removeItem(at: file)
                         }
-                    } else {
-                        state[file.path] = Self.fingerprint(file) ?? ""
-                        Self.saveState(state)
+                    } else if let mark = Self.fingerprint(file) {
+                        // Sofort festhalten, damit ein parallel angestossener
+                        // Durchlauf die Datei nicht erneut aufgreift
+                        state[file.path] = mark
+                        seen.mark(file.path, as: mark)
                     }
                 } catch {
                     result.failed += 1
@@ -185,7 +204,7 @@ final class UploadEngine: ObservableObject {
                         // Ohne Failed/ bliebe die Datei liegen und scheiterte alle
                         // fuenf Minuten erneut — einmal merken, dann Ruhe.
                         state[file.path] = mark
-                        Self.saveState(state)
+                        seen.mark(file.path, as: mark)
                         Log.shared.error(String(format: String(localized: "%@: %@ — will not be retried"),
                                             file.lastPathComponent, error.localizedDescription))
                     } else {
@@ -196,9 +215,8 @@ final class UploadEngine: ObservableObject {
             cleanupArchive(source: source, settings: settings)
         }
 
-        let pruned = state.filter { FileManager.default.fileExists(atPath: $0.key) }
-        Self.saveState(pruned)
-        return (result, pruned)
+        seen.prune()
+        return result
     }
 
     private nonisolated func upload(file: URL, to folder: String, settings: AppSettings,
@@ -285,12 +303,17 @@ final class UploadEngine: ObservableObject {
         return found.sorted { $0.path < $1.path }
     }
 
-    /// Wartet kurz und prueft, ob die Datei noch waechst (Kopie, Download, Komprimierung).
-    private nonisolated func isStable(_ url: URL, wait: Double) -> Bool {
-        guard let before = Self.fingerprint(url) else { return false }
+    /// Wartet einmal und behaelt die Dateien, die sich in der Zeit nicht
+    /// veraendert haben. Frueher wurde je Datei einzeln gewartet — bei 60
+    /// Sekunden Wartezeit dauerte ein Durchlauf dadurch Minuten.
+    private nonisolated func settled(_ files: [URL], wait: Double) -> [URL] {
+        guard !files.isEmpty else { return [] }
+        let before = files.map { ($0, Self.fingerprint($0)) }
         if wait > 0 { Thread.sleep(forTimeInterval: wait) }
-        guard let after = Self.fingerprint(url) else { return false }
-        return before == after
+        return before.compactMap { url, mark in
+            guard let mark, let now = Self.fingerprint(url), now == mark else { return nil }
+            return url
+        }
     }
 
     private nonisolated func matches(_ name: String, patterns: [String]) -> Bool {
@@ -397,19 +420,6 @@ final class UploadEngine: ObservableObject {
         return "\(size):\(Int(modified.timeIntervalSince1970))"
     }
 
-    private nonisolated static func loadState() -> [String: String] {
-        guard let data = try? Data(contentsOf: Paths.stateFile),
-              let decoded = try? JSONDecoder().decode([String: String].self, from: data) else { return [:] }
-        return decoded
-    }
-
-    private nonisolated static func saveState(_ state: [String: String]) {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        guard let data = try? encoder.encode(state) else { return }
-        try? data.write(to: Paths.stateFile)
-    }
-
     // MARK: Status
 
     private func setBusy(_ busy: Bool, status: String) {
@@ -417,10 +427,9 @@ final class UploadEngine: ObservableObject {
         self.status = status
     }
 
-    private nonisolated func finish(_ result: Result, state: [String: String]? = nil) {
+    private nonisolated func finish(_ result: Result) {
         Task { @MainActor [weak self] in
             guard let self else { return }
-            if let state { self.seen = state }
             self.isBusy = false
             self.uploadedTotal += result.uploaded
             if result.uploaded > 0 {
@@ -445,6 +454,101 @@ enum EngineError: LocalizedError {
         switch self {
         case .tooLarge(let sizeMB, let limit):
             return String(format: String(localized: "File is %.0f MB (limit is %.0f MB)"), sizeMB, limit)
+        }
+    }
+}
+
+
+// MARK: - Merkzettel
+
+/// Haelt fest, welche Dateien schon hochgeladen wurden — Pfad, Groesse und
+/// Aenderungsdatum.
+///
+/// Bewusst nicht am Main-Actor: Die Upload-Queue und die Oberflaeche greifen
+/// beide zu, und vor allem muss ein Durchlauf den *aktuellen* Stand sehen.
+/// Frueher bekam jeder Durchlauf eine Kopie aus dem Moment, in dem er
+/// eingereiht wurde — lief er erst Minuten spaeter los, lud er laengst
+/// erledigte Dateien ein zweites Mal hoch.
+final class SeenStore: @unchecked Sendable {
+    private let lock = NSLock()
+    private var entries: [String: String]
+
+    init() {
+        entries = SeenStore.load()
+    }
+
+    func snapshot() -> [String: String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return entries
+    }
+
+    func mark(_ path: String, as fingerprint: String) {
+        lock.lock()
+        entries[path] = fingerprint
+        let copy = entries
+        lock.unlock()
+        SeenStore.save(copy)
+    }
+
+    func mark(_ files: [URL]) {
+        lock.lock()
+        for file in files {
+            if let values = try? file.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey]),
+               let size = values.fileSize, let modified = values.contentModificationDate {
+                entries[file.path] = "\(size):\(Int(modified.timeIntervalSince1970))"
+            }
+        }
+        let copy = entries
+        lock.unlock()
+        SeenStore.save(copy)
+    }
+
+    func count(withPrefix prefix: String) -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return entries.keys.filter { $0.hasPrefix(prefix) }.count
+    }
+
+    @discardableResult
+    func forget(withPrefix prefix: String) -> Int {
+        lock.lock()
+        let before = entries.count
+        entries = entries.filter { !$0.key.hasPrefix(prefix) }
+        let removed = before - entries.count
+        let copy = entries
+        lock.unlock()
+        if removed > 0 { SeenStore.save(copy) }
+        return removed
+    }
+
+    /// Eintraege verschwundener Dateien entfernen, damit die Liste nicht waechst.
+    func prune() {
+        lock.lock()
+        let before = entries.count
+        entries = entries.filter { FileManager.default.fileExists(atPath: $0.key) }
+        let changed = before != entries.count
+        let copy = entries
+        lock.unlock()
+        if changed { SeenStore.save(copy) }
+    }
+
+    private static func load() -> [String: String] {
+        guard let data = try? Data(contentsOf: Paths.stateFile),
+              let decoded = try? JSONDecoder().decode([String: String].self, from: data) else { return [:] }
+        return decoded
+    }
+
+    private static func save(_ entries: [String: String]) {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(entries) else { return }
+        let tmp = Paths.stateFile.appendingPathExtension("tmp")
+        do {
+            try data.write(to: tmp)
+            _ = try FileManager.default.replaceItemAt(Paths.stateFile, withItemAt: tmp)
+        } catch {
+            try? data.write(to: Paths.stateFile)
         }
     }
 }
